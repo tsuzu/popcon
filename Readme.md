@@ -7,8 +7,8 @@
 - **このプロジェクトはまだまだ未完成なため利用可能な段階には至っていません。**
 
 ## Dependencies
-- [go.uuid](github.com/satori/go.uuid)
-- [mysql (go-sql-driver)](github.com/go-sql-driver/mysql)
+- [go.uuid](http://github.com/satori/go.uuid)
+- [mysql (go-sql-driver)](http://github.com/go-sql-driver/mysql)
 - MySQL
 
 ## License
