@@ -4,13 +4,21 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login|popcon</title>
+    <title>Login| popcon</title>
     <!-- BootstrapのCSS読み込み -->
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
     <!-- jQuery読み込み -->
     <script src="/static/js/jquery-1.12.2.min.js"></script>
     <!-- BootstrapのJS読み込み -->
     <script src="/static/js/bootstrap.min.js"></script>
+    <!--footerFixed JS-->
+    <script src="/static/js/footer-fixed.js"></script>
+    <style>
+        #footer {
+            text-align: center;
+            padding-bottom: 15px;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -45,19 +53,30 @@
     </header>
     <div class="container">
         <div class="page-header">
-	           <h1>ログインフォーム</h1>
+	           <h1>ログイン</h1>
         </div>
         <form method="post" action="/login">
           <div class="form-group">
             <label for="InputLoginID">ユーザID</label>
-            <input type="text" class="form-control" id="loginID">
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" id="loginID">
+                </div>
+            </div>
           </div>
           <div class="form-group">
             <label for="InputPassword">パスワード</label>
-            <input type="password" class="form-control" id="password">
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="password" class="form-control" id="password">
+                 </div>
+            </div>
           </div>
           <button type="submit" class="btn btn-default">Sign in</button>
         </form>
     </div>
+    <footer class="container-fluid" id="footer">
+        <small>Copyright (C) 2016 Tsuzu All Rights Reserved.</small>
+    </footer>
 </body>
 </html>
