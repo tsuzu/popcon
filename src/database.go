@@ -11,7 +11,7 @@ import (
 )
 
 // Shared in all codes
-var mainDB DatabaseManager
+var mainDB *DatabaseManager
 
 // DatabaseManager is a connector to this database
 type DatabaseManager struct {
@@ -157,13 +157,13 @@ func (dm *DatabaseManager) SessionFind(sessionID string) (*string, error) {
 		return nil, err
 	}
 
-	var userID *string
 	cnt := 0
 	for rows.Next() {
-		rows.Scan(userID)
-
-		if userID != nil {
-			return userID, nil
+        var uid string
+		err = rows.Scan(&uid)
+        
+		if err == nil {
+			return &uid, nil
 		}
 
 		if cnt > 3 {
@@ -171,8 +171,8 @@ func (dm *DatabaseManager) SessionFind(sessionID string) (*string, error) {
 		}
 		cnt++
 	}
-
-	return nil, err
+    
+    return nil, errors.New("error: Not Found")
 }
 
 // SessionRemove is to remove session
@@ -186,7 +186,7 @@ func (dm *DatabaseManager) SessionRemove(sessionID string) error {
 // NewDatabaseManager is a function to initialize database connections
 // static function
 func NewDatabaseManager() (*DatabaseManager, error) {
-	dm := DatabaseManager{}
+	dm := &DatabaseManager{}
 	var err error
 
 	// pcpjudge Database
@@ -195,7 +195,6 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer dm.db.Close()
 
 	dm.db.SetMaxIdleConns(150)
 
@@ -220,5 +219,5 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 		return nil, err
 	}
 
-	return &dm, nil
+	return dm, nil
 }

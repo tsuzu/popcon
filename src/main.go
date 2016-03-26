@@ -10,7 +10,7 @@ func main() {
 		panic(err)
 	}
 
-	mainDB = *pmainDB
+	mainDB = pmainDB
 
 	mux := http.NewServeMux()
 	handlers, err := CreateHandlers()
