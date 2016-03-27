@@ -40,13 +40,6 @@
                         <li><a href="/contests">コンテスト</a></li>
                         <li><a href="/help">ヘルプ</a></li>
                     </ul>
-                    <!--<div class="navbar-right">
-                        {{if .IsSignedIn}}
-                            <p class="navbar-text"><a href="/user/{{.ID}}">{{.ScreenName}}</a>さん</p>
-                        {{else}}
-                            <button type="button" class="btn btn-default navbar-btn" onclick="location.href='/login'">Sign in</button>
-                        {{end}}
-                    </div>-->
                 </div>
             </div>
         </nav>
@@ -55,7 +48,14 @@
         <div class="page-header">
 	           <h1>ログイン</h1>
         </div>
+        {{if .IsFailed}}
+        <div class="alert alert-danger" role="alert">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button>
+            <string>Failed</strong>: IDまたはパスワードが間違っています。
+        </div>
+        {{end}}
         <form method="post" action="/login">
+          <input type="hidden" name="comeback" value="{{.BackURL}}">
           <div class="form-group">
             <label for="InputLoginID">ユーザID</label>
             <div class="row">

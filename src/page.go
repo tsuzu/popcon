@@ -5,6 +5,7 @@ import (
 	"text/template"
     "fmt"
     "crypto/sha512"
+	"errors"
 )
 
 // NF404 is "404 Not Found"
@@ -23,17 +24,21 @@ The page is not found in this server.
 </html>
 `
 
-// PageError is a error type for Page.go
-type PageError string
-
-func (pe PageError) Error() string {
-	return string(pe)
-}
-
-// NewPageError is to return a PageError
-func NewPageError(msg string) PageError {
-	return PageError(msg)
-}
+// NI501 is "501 Not Implemented"
+const NI501 = `
+<!DOCTYPE html>
+<html>
+<head>
+<title>
+501 Not Implemented
+</title>
+</head>
+<body>
+<h1>501 Not Implemented</h1>
+The service is not implemented.
+</body>
+</html>
+`
 
 // PageHandlerFuncType is a type of the function used in PageHandler
 type PageHandlerFuncType func(*template.Template, http.ResponseWriter, *http.Request)
@@ -61,10 +66,18 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 		tmpl, err1 := template.ParseFiles("./html/index_tmpl.html")
 
 		if err1 != nil {
-			return nil, NewPageError("Failed to load ./html/index_tmpl.html")
+			return nil, errors.New("Failed to load ./html/index_tmpl.html")
 		}
 
 		f := func(tmp *template.Template, rw http.ResponseWriter, req *http.Request) {
+			if req.URL.Path != "/" && req.URL.Path != "/#" {
+				rw.WriteHeader(http.StatusNotFound)
+				
+				fmt.Fprint(rw, NF404)
+				
+				return
+			}
+			
 			rw.WriteHeader(http.StatusOK)
 
 			cookies := req.Cookies()
@@ -91,12 +104,12 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 				}
 			}
 
-            var ID, UN string
+            var ID, ScreenName string
             if userID != nil {
                 ID = *userID
             }
             if userName != nil {
-                UN = *userName
+                ScreenName = *userName
             }
             
 			type Toppage struct {
@@ -105,7 +118,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 				ScreenName string
 			}
 
-			tmp.Execute(rw, Toppage{userID != nil && userName != nil, ID, UN})
+			tmp.Execute(rw, Toppage{userID != nil && userName != nil, ID, ScreenName})
 		}
 
 		return &PageHandler{tmpl, f}, nil
@@ -115,40 +128,53 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 		return nil, err
 	}
 
-	res["/onlinejudge"], err = func() (*PageHandler, error) {
-		tmpl, err1 := template.ParseFiles("./html/index_tmpl.html")
-
-		if err1 != nil {
-			return nil, NewPageError("Failed to load ./html/index_tmpl.html")
-		}
-
+	res["/onlinejudge/"], err = func() (*PageHandler, error) {
 		f := func(tmp *template.Template, rw http.ResponseWriter, req *http.Request) {
-			rw.WriteHeader(http.StatusOK)
-
-			type Toppage struct {
-				IsSignedIn bool
-				ID         string
-				ScreenName string
-			}
-
-			tmp.Execute(rw, Toppage{false, "Tsuzu", "Tsuzu"})
+			rw.WriteHeader(http.StatusNotImplemented)
+			
+			fmt.Fprint(rw, NI501)
 		}
 
-		return &PageHandler{tmpl, f}, nil
+		return &PageHandler{nil, f}, nil
+	}()
+	
+	res["/contests/"], err = func() (*PageHandler, error) {
+		f := func(tmp *template.Template, rw http.ResponseWriter, req *http.Request) {
+			rw.WriteHeader(http.StatusNotImplemented)
+			
+			fmt.Fprint(rw, NI501)
+		}
+
+		return &PageHandler{nil, f}, nil
 	}()
 
 	res["/login"], err = func() (*PageHandler, error) {
+		type LoginTemp struct {
+			IsFailed bool
+			BackURL string
+		}
+		
 		tmpl, err1 := template.ParseFiles("./html/login_tmpl.html")
 
 		if err1 != nil {
-			return nil, NewPageError("Failed to load ./html/login_tmpl.html")
+			return nil, errors.New("Failed to load ./html/login_tmpl.html")
 		}
 
 		f := func(tmp *template.Template, rw http.ResponseWriter, req *http.Request) {
             if req.Method == "GET" {
+				req.ParseForm()
                 rw.WriteHeader(http.StatusOK)
+				
+				comeback, res := req.Form["comeback"]
 
-    			tmp.Execute(rw, nil)
+				var cburl string
+				if !res || len(comeback) == 0 || len(comeback[0]) == 0 {
+					cburl = "/"
+				}else {
+					cburl = comeback[0]
+				}
+
+    			tmp.Execute(rw, LoginTemp{false, cburl})
             }else if req.Method == "POST" {
                 if req.ParseForm() != nil {
                     rw.WriteHeader(http.StatusBadRequest)
@@ -157,26 +183,30 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
                     return
                 }
                 
-                var str string
-                
-                fmt.Fscan(req.Body, str)
-                
                 loginID, res := req.Form["loginID"]
                 password, res2 := req.Form["password"]
-                
-                if !res || !res2 || len(loginID) == 0 || len(password) == 0 || len(loginID) > 20 {
+				backurl, res3 := req.Form["comeback"]
+				
+                if !res || !res2 || !res3 || len(loginID) == 0 || len(password) == 0 || len(backurl) == 0 || len(loginID) > 20 || len(backurl[0]) == 0 {
                     rw.WriteHeader(http.StatusBadRequest)
                     rw.Write(nil)
                     
                     return
                 }
                 
+				if backurl[0][0] != '/' {
+					rw.WriteHeader(http.StatusBadRequest)
+                    rw.Write(nil)
+                    
+                    return
+				}
+				
                 user, err := mainDB.UserFind(loginID[0])
                 
                 if err != nil || user.passHash != sha512.Sum512([]byte(password[0])) {
                     rw.WriteHeader(http.StatusOK)
                     
-                    tmp.Execute(rw, nil)
+                    tmp.Execute(rw, LoginTemp{true, backurl[0]})
                     
                     return
                 }
@@ -195,8 +225,8 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
                     
                     cookie.MaxAge = 2592000
                     
-                    http.SetCookie(rw, &cookie)
-                    rw.Header().Add("Location", "/")
+					http.SetCookie(rw, &cookie)
+                    rw.Header().Add("Location", backurl[0])
                     rw.WriteHeader(http.StatusFound)
 
                     rw.Write(nil)

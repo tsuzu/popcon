@@ -1,7 +1,9 @@
 package main
 
-import "net/http"
-import "time"
+import (
+	"net/http"
+	"time"
+)
 
 func main() {
 	pmainDB, err := NewDatabaseManager()
@@ -9,7 +11,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
+	
+	// Copy to the global veriable
 	mainDB = pmainDB
 
 	mux := http.NewServeMux()
@@ -24,7 +27,8 @@ func main() {
 	}
 
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
-
+	
+	// Should use TLS
 	server := http.Server{
 		Addr:           ":8080",
 		ReadTimeout:    10 * time.Second,
