@@ -42,7 +42,7 @@
                     </ul>
                     <div class="navbar-right">
                         {{if .IsSignedIn}}
-                            <p class="navbar-text"><a href="/user/{{html .ID}}">{{html .ScreenName}}</a>さん</p>
+                            <p class="navbar-text"><a href="/userinfo">{{html .UserName}}</a>さん</p>
                         {{else}}
                             <button type="button" class="btn btn-default navbar-btn" onclick="location.href='/login?comeback=/'">Sign in</button>
                         {{end}}
