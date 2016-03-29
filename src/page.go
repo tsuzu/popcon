@@ -8,38 +8,6 @@ import (
 	"errors"
 )
 
-// NF404 is "404 Not Found"
-const NF404 = `
-<!DOCTYPE html>
-<html>
-<head>
-<title>
-404 Not Found
-</title>
-</head>
-<body>
-<h1>404 Not Found</h1>
-The page is not found in this server.
-</body>
-</html>
-`
-
-// NI501 is "501 Not Implemented"
-const NI501 = `
-<!DOCTYPE html>
-<html>
-<head>
-<title>
-501 Not Implemented
-</title>
-</head>
-<body>
-<h1>501 Not Implemented</h1>
-The service is not implemented.
-</body>
-</html>
-`
-
 // PageHandlerFuncType is a type of the function used in PageHandler
 type PageHandlerFuncType func(*template.Template, http.ResponseWriter, *http.Request)
 
@@ -63,9 +31,9 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 	var err error
 
 	res["/"], err = func() (*PageHandler, error) {
-		tmpl, err1 := template.ParseFiles("./html/index_tmpl.html")
+		tmpl, err := template.ParseFiles("./html/index_tmpl.html")
 
-		if err1 != nil {
+		if err != nil {
 			return nil, errors.New("Failed to load ./html/index_tmpl.html")
 		}
 
@@ -80,45 +48,17 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 			
 			rw.WriteHeader(http.StatusOK)
 
-			cookies := req.Cookies()
-			var session *string
-            
-			for idx := range cookies {
-				if cookies[idx].Name == "session" {
-					session = &cookies[idx].Value
-				}
-			}
-            
-			var userName *string
-			var userID *string
-			var user *User
-			if session != nil {
-				userID, err = mainDB.SessionFind(*session)
-                
-				if userID != nil && err == nil {
-					user, err1 = mainDB.UserFind(*userID)
-                    
-					if user != nil && err1 == nil {
-						userName = &user.userName
-					}
+			std, err := ParseRequestForSession(req)
+			
+			if std == nil || err != nil {
+				std = &SessionTemplateData{
+					IsSignedIn: false,
+					ID: "",
+					ScreenName: "",
 				}
 			}
 
-            var ID, ScreenName string
-            if userID != nil {
-                ID = *userID
-            }
-            if userName != nil {
-                ScreenName = *userName
-            }
-            
-			type Toppage struct {
-				IsSignedIn bool
-				ID         string
-				ScreenName string
-			}
-
-			tmp.Execute(rw, Toppage{userID != nil && userName != nil, ID, ScreenName})
+			tmp.Execute(rw, *std)
 		}
 
 		return &PageHandler{tmpl, f}, nil
@@ -154,9 +94,9 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 			BackURL string
 		}
 		
-		tmpl, err1 := template.ParseFiles("./html/login_tmpl.html")
+		tmpl, err := template.ParseFiles("./html/login_tmpl.html")
 
-		if err1 != nil {
+		if err != nil {
 			return nil, errors.New("Failed to load ./html/login_tmpl.html")
 		}
 
@@ -189,14 +129,14 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 				
                 if !res || !res2 || !res3 || len(loginID) == 0 || len(password) == 0 || len(backurl) == 0 || len(loginID) > 20 || len(backurl[0]) == 0 {
                     rw.WriteHeader(http.StatusBadRequest)
-                    rw.Write(nil)
+                    fmt.Fprint(rw, BR400)
                     
                     return
                 }
                 
 				if backurl[0][0] != '/' {
 					rw.WriteHeader(http.StatusBadRequest)
-                    rw.Write(nil)
+                    fmt.Fprint(rw, BR400)
                     
                     return
 				}
@@ -211,29 +151,27 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
                     return
                 }
                 
-                sessionID, e := mainDB.SessionAdd(user.userID)
+                sessionID, err := mainDB.SessionAdd(user.userID)
                 
-                if e != nil {
+                if err != nil {
                     rw.WriteHeader(http.StatusInternalServerError)
                     
-                    fmt.Fprint(rw, "<html><body><h1>500 Internal Server Error</h1></body></html>")
+                    fmt.Fprint(rw, ISE500)
                 }else {
                     cookie := http.Cookie{
                         Name: "session",
                         Value: *sessionID,
+						MaxAge: 2592000,
                     };
                     
-                    cookie.MaxAge = 2592000
-                    
 					http.SetCookie(rw, &cookie)
-                    rw.Header().Add("Location", backurl[0])
-                    rw.WriteHeader(http.StatusFound)
+					RespondRedirection(rw, backurl[0])
 
                     rw.Write(nil)
                 }
             }else {
                 rw.WriteHeader(http.StatusBadRequest)                
-                rw.Write(nil)
+				fmt.Fprint(rw, BR400)
             }
 			
 		}

@@ -12,7 +12,7 @@ func main() {
 		panic(err)
 	}
 	
-	// Copy to the global veriable
+	// Copy to the global variable
 	mainDB = pmainDB
 
 	mux := http.NewServeMux()

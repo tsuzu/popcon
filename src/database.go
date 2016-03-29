@@ -84,7 +84,7 @@ type User struct {
 
 // UserFind is to return a User object
 // userID is the primary key
-// len(userID) <= 20, len(userName) <= 256 len(pass) <= 50, len(email) <= 50
+// len(userID) <= 20
 func (dm *DatabaseManager) UserFind(userID string) (*User, error) {
 	if len(userID) > 20 {
 		return nil, errors.New("error: len(internalID) > 20")
@@ -109,6 +109,44 @@ func (dm *DatabaseManager) UserFind(userID string) (*User, error) {
 			userID:   userID,
 			userName: userName,
 			email:    email,
+		}
+
+		for idx := range user.passHash {
+			user.passHash[idx] = passHash[idx]
+		}
+	}
+
+	if user == nil {
+		return nil, errors.New("Not found")
+	}
+
+	return user, nil
+}
+
+// UserFindLight returns a User object which contains only userID and passHash
+// userID is the primary key
+// len(userID) <= 20
+func (dm *DatabaseManager) UserFindLight(userID string) (*User, error) {
+	if len(userID) > 20 {
+		return nil, errors.New("error: len(internalID) > 20")
+	}
+
+	rows, err := dm.db.Query("select passHash from users where userID=?", userID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var passHash []byte
+
+	var user *User
+	for rows.Next() {
+		rows.Scan(&passHash)
+
+		user = &User{
+			userID:   userID,
 		}
 
 		for idx := range user.passHash {
