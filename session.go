@@ -15,7 +15,7 @@ func GetSessionTemplateData(sessionID string) (*SessionTemplateData, error) {
 		return nil, err
 	}
 
-	return &SessionTemplateData{true, user.userID, user.userName}, nil
+	return &SessionTemplateData{true, user.UserID, user.UserName}, nil
 }
 
 // GetSessionUserData returns an User object

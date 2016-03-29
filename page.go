@@ -143,7 +143,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 				user, err := mainDB.UserFindLight(loginID[0])
 
-				if err != nil || user.passHash != sha512.Sum512([]byte(password[0])) {
+				if err != nil || user.PassHash != sha512.Sum512([]byte(password[0])) {
 					rw.WriteHeader(http.StatusOK)
 
 					tmp.Execute(rw, LoginTemp{true, backurl[0]})
@@ -151,7 +151,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 					return
 				}
 
-				sessionID, err := mainDB.SessionAdd(user.internalID)
+				sessionID, err := mainDB.SessionAdd(user.InternalID)
 
 				if err != nil {
 					rw.WriteHeader(http.StatusInternalServerError)

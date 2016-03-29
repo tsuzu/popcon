@@ -105,14 +105,14 @@ func (dm *DatabaseManager) UserFind(userID string) (*User, error) {
 		rows.Scan(&internalID, &userName, &passHash, &email)
 
 		user = &User{
-			userID:     userID,
-			userName:   userName,
-			email:      email,
-			internalID: internalID,
+			UserID:     userID,
+			UserName:   userName,
+			Email:      email,
+			InternalID: internalID,
 		}
 
-		for idx := range user.passHash {
-			user.passHash[idx] = passHash[idx]
+		for idx := range user.PassHash {
+			user.PassHash[idx] = passHash[idx]
 		}
 	}
 
@@ -147,12 +147,12 @@ func (dm *DatabaseManager) UserFindLight(userID string) (*User, error) {
 		rows.Scan(&internalID, &passHash)
 
 		user = &User{
-			userID:     userID,
-			internalID: internalID,
+			UserID:     userID,
+			InternalID: internalID,
 		}
 
-		for idx := range user.passHash {
-			user.passHash[idx] = passHash[idx]
+		for idx := range user.PassHash {
+			user.PassHash[idx] = passHash[idx]
 		}
 	}
 
@@ -181,14 +181,14 @@ func (dm *DatabaseManager) UserFindFromInternalID(internalID int) (*User, error)
 		rows.Scan(&userID, &userName, &passHash, &email)
 
 		user = &User{
-			internalID: internalID,
-			userID:     userID,
-			userName:   userName,
-			email:      email,
+			InternalID: internalID,
+			UserID:     userID,
+			UserName:   userName,
+			Email:      email,
 		}
 
-		for idx := range user.passHash {
-			user.passHash[idx] = passHash[idx]
+		for idx := range user.PassHash {
+			user.PassHash[idx] = passHash[idx]
 		}
 	}
 
