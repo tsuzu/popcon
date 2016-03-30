@@ -19,6 +19,10 @@
             text-align: center;
             padding-bottom: 15px;
         }
+        
+        .userInfo {
+            font-size: 20px;
+        }
     </style>
 </head>
 
@@ -46,34 +50,37 @@
             </div>
         </nav>
     </header>
-    <div class="contents">
-        <div class="container">
-            <div class="page-header">
-                <h1>ユーザ情報</h1>
-            </div>
-            <ul>
-                <p>
-                    <li>Login ID: {{html .userID}}</li>
-                </p>
-                <p>
-                    <li>User Name: {{html .userName}}</li>
-                </p>
-                <p>
-                    <li>E-mail: {{html .email}}</li>
-                </p>
-            </ul>
+    <div class="container">
+        <div class="page-header">
+            <h1>ユーザ情報</h1>
         </div>
-        <div style="margin-top:10px;" class="container">
-            <div class="row">
-                <div class="col-md-4">
-                    <ul class="list-group">
-                        <li class="list-group-item"><a href="/onlinejudge">オンラインジャッジ</a></li>
-                        <li class="list-group-item"><a href="/contests">コンテスト</a></li>
-                        <li class="list-group-item"><a href="/help">ヘルプ</a></li>
-                    </ul>
-                </div>
+        <div class="row">
+            <div class="col-md-8">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Login ID</td>
+                            <td>{{html .UserID}}</td>
+                        </tr>
+                        <tr>
+                            <td>User Name</td>
+                            <td>{{html .UserName}}</td>
+                        </tr>
+                        <tr>
+                            <td>E-mail</td>
+                            <td>{{html .Email}}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
+        <button type="button" class="btn btn-default" onclick="location.href='/logout'">Sign out</button>
     </div>
     <footer class="container-fluid" id="footer">
         <small>Copyright (C) 2016 Tsuzu All Rights Reserved.</small>

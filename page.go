@@ -46,8 +46,6 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 				return
 			}
 
-			rw.WriteHeader(http.StatusOK)
-
 			std, err := ParseRequestForSession(req)
 
 			if std == nil || err != nil {
@@ -58,6 +56,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 				}
 			}
 
+			rw.WriteHeader(http.StatusOK)
 			tmp.Execute(rw, *std)
 		}
 
@@ -177,6 +176,27 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 		}
 
 		return &PageHandler{tmpl, f}, nil
+	}()
+
+	res["/logout"], err = func() (*PageHandler, error) {
+		f := func(tmp *template.Template, rw http.ResponseWriter, req *http.Request) {
+			session := ParseSession(req)
+			
+			if session != nil {
+				mainDB.SessionRemove(*session)
+			}
+			
+			cookie := http.Cookie{
+				Name: "session",
+				Value: *session,
+				MaxAge: 0,
+			}
+			
+			http.SetCookie(rw, &cookie)
+			RespondRedirection(rw, "/")
+		}
+
+		return &PageHandler{nil, f}, nil
 	}()
 
 	res["/userinfo"], err = func() (*PageHandler, error) {

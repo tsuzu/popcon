@@ -7,4 +7,5 @@ type User struct {
 	UserName   string
 	PassHash   [64]byte
 	Email      string
+	Belonging  int
 }

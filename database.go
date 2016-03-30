@@ -22,7 +22,7 @@ type DatabaseManager struct {
 // userID is the primary key
 // userName is the unique key
 // len(userID) <= 20, len(userName) <= 256 len(pass) <= 50, len(email) <= 50
-func (dm *DatabaseManager) UserAdd(userID string, userName string, pass string, email string) (int, error) {
+func (dm *DatabaseManager) UserAdd(userID string, userName string, pass string, email string, belonging int) (int, error) {
 	if len(userID) > 20 {
 		return 0, errors.New("error: len(userID) > 20")
 	}
@@ -41,7 +41,7 @@ func (dm *DatabaseManager) UserAdd(userID string, userName string, pass string, 
 		return 0, errors.New("error: len(email) > 50")
 	}
 
-	res, err := dm.db.Exec("insert into users (userID, userName, passHash, email, isMember) values (?, ?, ?, ?, false)", userID, userName, passHashArr[:], email)
+	res, err := dm.db.Exec("insert into users (userID, userName, passHash, email, belonging) values (?, ?, ?, ?, ?)", userID, userName, passHashArr[:], email, belonging)
 
 	if err != nil {
 		return 0, err
@@ -165,7 +165,7 @@ func (dm *DatabaseManager) UserFindLight(userID string) (*User, error) {
 
 // UserFindFromInternalID is to return a User object
 func (dm *DatabaseManager) UserFindFromInternalID(internalID int) (*User, error) {
-	rows, err := dm.db.Query("select userID, userName, passHash, email from users where internalID=?", internalID)
+	rows, err := dm.db.Query("select userID, userName, passHash, email, belonging from users where internalID=?", internalID)
 
 	if err != nil {
 		return nil, err
@@ -175,16 +175,18 @@ func (dm *DatabaseManager) UserFindFromInternalID(internalID int) (*User, error)
 
 	var passHash []byte
 	var userID, userName, email string
+	var belonging int
 
 	var user *User
 	for rows.Next() {
-		rows.Scan(&userID, &userName, &passHash, &email)
+		rows.Scan(&userID, &userName, &passHash, &email, &belonging)
 
 		user = &User{
 			InternalID: internalID,
 			UserID:     userID,
 			UserName:   userName,
 			Email:      email,
+			Belonging: belonging,
 		}
 
 		for idx := range user.PassHash {
@@ -280,7 +282,7 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 	}
 
 	// Create Users Table
-	_, err = dm.db.Exec("create table if not exists users (internalID int(11) auto_increment primary key, userID varchar(20) unique, userName varchar(256) unique, passHash varbinary(64), email varchar(50), isMember boolean, authortity int(11))")
+	_, err = dm.db.Exec("create table if not exists users (internalID int(11) auto_increment primary key, userID varchar(20) unique, userName varchar(256) unique, passHash varbinary(64), email varchar(50), belonging int(11))")
 
 	if err != nil {
 		return nil, err

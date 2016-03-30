@@ -12,6 +12,10 @@
 - internalID (int, index)
 - unixTimeLimit(int, index)
 
+## Belonging (belongings)
+- belonging (int, primary key)
+- teamName (varchar(50))
+
 # ToDo
-- Divide codes in multiple files
 - Implement caches of sessions (session.go)
+- Implement belongings table
