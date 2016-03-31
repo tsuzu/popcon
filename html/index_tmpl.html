@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -18,8 +19,12 @@
             text-align: center;
             padding-bottom: 15px;
         }
+        .time {
+            text-align: right;
+        }
     </style>
 </head>
+
 <body>
     <header>
         <nav class="navbar navbar-default">
@@ -42,9 +47,9 @@
                     </ul>
                     <div class="navbar-right">
                         {{if .IsSignedIn}}
-                            <p class="navbar-text">User: <a href="/userinfo">{{html .UserName}}</a></p>
+                        <p class="navbar-text">User: <a href="/userinfo">{{html .UserName}}</a></p>
                         {{else}}
-                            <button type="button" class="btn btn-default navbar-btn" onclick="location.href='/login?comeback=/'">Sign in</button>
+                        <button type="button" class="btn btn-default navbar-btn" onclick="location.href='/login?comeback=/'">Sign in</button>
                         {{end}}
                     </div>
                 </div>
@@ -52,31 +57,60 @@
         </nav>
     </header>
     <div class="contents">
-    <div class="container">
-        <div class="page-header">
-	           <h1>popcon</h1>
-        </div>
-        <p>
-            部活動での利用を主な目的とした競技プログラミング用コンテストサーバです。
-        </p>
-        <p>
-            常時稼働しているオンラインジャッジと、たまに開催するコンテストが存在します。
-        </p>
-    </div>
-    <div style="margin-top:10px;" class="container">
-        <div class="row">
-            <div class="col-md-4">
-                <ul class="list-group">
-                    <li class="list-group-item"><a href="/onlinejudge">オンラインジャッジ</a></li>
-                    <li class="list-group-item"><a href="/contests">コンテスト</a></li>
-                    <li class="list-group-item"><a href="/help">ヘルプ</a></li>
-                </ul>
+        <div class="container">
+            <div class="page-header">
+                <h1>popcon</h1>
             </div>
+            <p>
+                部活動での利用を主な目的とした競技プログラミング用コンテストサーバです。
+            </p>
+            <p>
+                常時稼働しているオンラインジャッジと、たまに開催するコンテストが存在します。
+            </p>
         </div>
-    </div>
-    </div>
-    <footer class="container-fluid" id="footer">
-        <small>Copyright (C) 2016 Tsuzu All Rights Reserved.</small>
-    </footer>
+        <div style="margin-top:10px;" class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <ul class="list-group">
+                        <li class="list-group-item"><a href="/onlinejudge">オンラインジャッジ</a></li>
+                        <li class="list-group-item"><a href="/contests">コンテスト</a></li>
+                        <li class="list-group-item"><a href="/help">ヘルプ</a></li>
+                    </ul>
+                </div>
+            </div>
+            <!--            <div class="row">
+                <div class="col-md-8">-->
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    News(直近10件)
+                </div>
+
+                <table class="table">
+                    <!--<thead>
+                            <tr>
+                                <th>概要</th><th>時間</th>
+                            </tr>
+                        </thead>-->
+
+                    <tbody>
+                        {{range .News}}
+                        <tr>
+                            <td>{{html .Text}}</td>
+                            <td class="time">{{html .UnixTime}}</td>
+                        </tr>
+                        {{else}}
+                        <tr>
+                            <td>ニュースはありません。</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+            <!--                </div>
+            </div>-->
+            <footer class="container-fluid" id="footer">
+                <small>Copyright (C) 2016 Tsuzu All Rights Reserved.</small>
+            </footer>
 </body>
+
 </html>

@@ -55,9 +55,24 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 					UserName:   "",
 				}
 			}
+            
+            news, err := mainDB.GetNews()
+
+            if err != nil {
+                news = make([]News, 0)
+                
+                fmt.Println(err.Error())
+            }
+            
+            type IndexResp struct {
+                *SessionTemplateData
+                News []News
+            }
+            
+            resp := &IndexResp{std, news}
 
 			rw.WriteHeader(http.StatusOK)
-			tmp.Execute(rw, *std)
+			tmp.Execute(rw, *resp)
 		}
 
 		return &PageHandler{tmpl, f}, nil

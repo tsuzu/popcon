@@ -1,5 +1,21 @@
 package main
 
+// BR400 is "400 Bad Request"
+const BR400 = `
+<!DOCTYPE html>
+<html>
+<head>
+<title>
+400 Bad Request
+</title>
+</head>
+<body>
+<h1>400 Bad Request</h1>
+Received an illegal request.
+</body>
+</html>
+`
+
 // NF404 is "404 Not Found"
 const NF404 = `
 <!DOCTYPE html>
@@ -12,22 +28,6 @@ const NF404 = `
 <body>
 <h1>404 Not Found</h1>
 The page is not found in this server.
-</body>
-</html>
-`
-
-// NI501 is "501 Not Implemented"
-const NI501 = `
-<!DOCTYPE html>
-<html>
-<head>
-<title>
-501 Not Implemented
-</title>
-</head>
-<body>
-<h1>501 Not Implemented</h1>
-The service is not implemented.
 </body>
 </html>
 `
@@ -48,18 +48,18 @@ Some errors occurs in this server.
 </html>
 `
 
-// BR400 is "400 Bad Request"
-const BR400 = `
+// NI501 is "501 Not Implemented"
+const NI501 = `
 <!DOCTYPE html>
 <html>
 <head>
 <title>
-400 Bad Request
+501 Not Implemented
 </title>
 </head>
 <body>
-<h1>400 Bad Request</h1>
-Received an illegal request.
+<h1>501 Not Implemented</h1>
+The service is not implemented.
 </body>
 </html>
 `

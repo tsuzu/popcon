@@ -12,10 +12,15 @@
 - internalID (int, index)
 - unixTimeLimit(int, index)
 
-## Belonging (belongings)
-- belonging (int, primary key)
-- teamName (varchar(50))
+## Group (groups)
+- groupID (int, primary key)
+- groupName (varchar(50))
+
+## News (news)
+- text (varchar(256))
+- unixTime (int, index)
 
 # ToDo
 - Implement caches of sessions (session.go)
-- Implement belongings table
+- Implement /onlinejudge
+- Implement /contests

@@ -14,6 +14,7 @@ func main() {
 
 	// Copy to the global variable
 	mainDB = pmainDB
+    mainDB.showedNewCount = 10
 
 	mux := http.NewServeMux()
 	handlers, err := CreateHandlers()
@@ -37,6 +38,9 @@ func main() {
 		Handler:        mux,
 	}
 
-	server.ListenAndServe()
+	err = server.ListenAndServe()
 
+    if err != nil {
+        panic(err)
+    }
 }
