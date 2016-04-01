@@ -27,7 +27,6 @@ func ParseRequestForUseData(req *http.Request) (*User, error) {
 	return GetSessionUserData(*sessionID)
 }
 
-
 // ParseSession gets session from Cookie
 func ParseSession(req *http.Request) *string {
 	cookies := req.Cookies()

@@ -10,7 +10,7 @@ type User struct {
 	UserName   string
 	PassHash   [64]byte
 	Email      string
-	GroupID  int
+	GroupID    int
 }
 
 // UserAdd is a function to add a new user
@@ -101,7 +101,7 @@ func (dm *DatabaseManager) UserFind(userID string) (*User, error) {
 			UserName:   userName,
 			Email:      email,
 			InternalID: internalID,
-            GroupID: groupID,
+			GroupID:    groupID,
 		}
 
 		for idx := range user.PassHash {
@@ -179,7 +179,7 @@ func (dm *DatabaseManager) UserFindFromInternalID(internalID int) (*User, error)
 			UserID:     userID,
 			UserName:   userName,
 			Email:      email,
-			GroupID: groupID,
+			GroupID:    groupID,
 		}
 
 		for idx := range user.PassHash {
@@ -196,57 +196,57 @@ func (dm *DatabaseManager) UserFindFromInternalID(internalID int) (*User, error)
 
 // Group is a struct to save GroupData
 type Group struct {
-    GroupID int
-    GroupName string
+	GroupID   int
+	GroupName string
 }
 
 // GroupAdd adds a new group
 // len(groupName) <= 50
 func (dm *DatabaseManager) GroupAdd(groupName string) (int, error) {
-    if len(groupName) > 50 {
-        return 0, errors.New("len(groupName) > 50")
-    }
-    
-    res, err := dm.db.Exec("insert into groups (groupName) values (?)", groupName)
-    
-    if err != nil {
-        return 0, err
-    }
-    
-    if id, err := res.LastInsertId(); err != nil {
-        return 0, err
-    } else {
-        return int(id), err
-    }
+	if len(groupName) > 50 {
+		return 0, errors.New("len(groupName) > 50")
+	}
+
+	res, err := dm.db.Exec("insert into groups (groupName) values (?)", groupName)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if id, err := res.LastInsertId(); err != nil {
+		return 0, err
+	} else {
+		return int(id), err
+	}
 }
 
 // GroupFind finds a group with groupID
 func (dm *DatabaseManager) GroupFind(groupID int) (*string, error) {
-    
-    res, err := dm.db.Query("select groupName from groups where groupID=?", groupID)
-    
-    if err != nil {
-        return nil, err
-    }
-    
-    var groupName string
 
-    if !res.Next() {
-        return nil, errors.New("rows.Next() failed")
-    }
-    
-    err = res.Scan(&groupName)
-    
-    if err != nil {
-        return nil, err
-    }
-    
-    return &groupName, nil
+	res, err := dm.db.Query("select groupName from groups where groupID=?", groupID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var groupName string
+
+	if !res.Next() {
+		return nil, errors.New("rows.Next() failed")
+	}
+
+	err = res.Scan(&groupName)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &groupName, nil
 }
 
 // GroupRemove removes from groups
 func (dm *DatabaseManager) GroupRemove(groupID int) error {
-    _, err := dm.db.Exec("delete from groups where groupID=?", groupID)
+	_, err := dm.db.Exec("delete from groups where groupID=?", groupID)
 
-	return err 
+	return err
 }

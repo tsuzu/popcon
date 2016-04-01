@@ -11,6 +11,10 @@
 - [mysql (go-sql-driver)](http://github.com/go-sql-driver/mysql)
 - MySQL
 
+## How to install
+- install MySQL
+- Run "go get github.com/cs3238-tsuzu/popcon"
+
 ## License
 - Under the MIT License
 - Copyright (c) 2016 Tsuzu

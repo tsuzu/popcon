@@ -5,23 +5,37 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"text/template"
 )
 
 // PageHandlerFuncType is a type of the function used in PageHandler
-type PageHandlerFuncType func(*template.Template, http.ResponseWriter, *http.Request)
+type PageHandlerFuncType func(http.ResponseWriter, *http.Request)
 
 // PageHandler a handler for each page
 type PageHandler struct {
-	ParsedPage *template.Template
-	Callback   PageHandlerFuncType
+	Callback PageHandlerFuncType
 }
 
 // PassHandler is a function that pass a handler
 func (ph *PageHandler) PassHandler() func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		ph.Callback(ph.ParsedPage, rw, req)
+		ph.Callback(rw, req)
 	}
+}
+
+// FuncHandlerWrapepr is for FuncToHandler
+type FuncHandlerWrapepr struct {
+	f func(http.ResponseWriter, *http.Request)
+}
+
+func (fhw FuncHandlerWrapepr) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	fhw.f(rw, req)
+}
+
+// FuncToHandler wraps functions as a handler
+func FuncToHandler(f func(http.ResponseWriter, *http.Request)) FuncHandlerWrapepr {
+	return FuncHandlerWrapepr{f}
 }
 
 // CreateHandlers is a function to return hadlers
@@ -31,13 +45,13 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 	var err error
 
 	res["/"], err = func() (*PageHandler, error) {
-		tmpl, err := template.ParseFiles("./html/index_tmpl.html")
+		tmp, err := template.ParseFiles("./html/index_tmpl.html")
 
 		if err != nil {
 			return nil, errors.New("Failed to load ./html/index_tmpl.html")
 		}
 
-		f := func(tmp *template.Template, rw http.ResponseWriter, req *http.Request) {
+		f := func(rw http.ResponseWriter, req *http.Request) {
 			if req.URL.Path != "/" && req.URL.Path != "/#" {
 				rw.WriteHeader(http.StatusNotFound)
 
@@ -55,28 +69,28 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 					UserName:   "",
 				}
 			}
-            
-            news, err := mainDB.GetNews()
 
-            if err != nil {
-                news = make([]News, 0)
-                
-                fmt.Println(err.Error())
-            }
-            
-            type IndexResp struct {
-                *SessionTemplateData
-                News []News
+			news, err := mainDB.NewsGet()
+
+			if err != nil {
+				news = make([]News, 0)
+
+				fmt.Println(err.Error())
+			}
+
+			type IndexResp struct {
+				*SessionTemplateData
+				News      []News
 				NewsCount int
-            }
-            
-            resp := &IndexResp{std, news, mainDB.showedNewCount}
+			}
+
+			resp := &IndexResp{std, news, mainDB.showedNewCount}
 
 			rw.WriteHeader(http.StatusOK)
 			tmp.Execute(rw, *resp)
 		}
 
-		return &PageHandler{tmpl, f}, nil
+		return &PageHandler{f}, nil
 	}()
 
 	if err != nil {
@@ -84,23 +98,27 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 	}
 
 	res["/onlinejudge/"], err = func() (*PageHandler, error) {
-		f := func(tmp *template.Template, rw http.ResponseWriter, req *http.Request) {
-			rw.WriteHeader(http.StatusNotImplemented)
+		ojh := http.StripPrefix("/onlinejudge/", CreateOnlineJudgeHandler())
 
-			fmt.Fprint(rw, NI501)
+		if ojh != nil {
+			return nil, errors.New("Failed to CreateOnlineJudgeHandler()")
 		}
 
-		return &PageHandler{nil, f}, nil
+		f := func(rw http.ResponseWriter, req *http.Request) {
+			ojh.ServeHTTP(rw, req)
+		}
+
+		return &PageHandler{f}, nil
 	}()
 
 	res["/contests/"], err = func() (*PageHandler, error) {
-		f := func(tmp *template.Template, rw http.ResponseWriter, req *http.Request) {
+		f := func(rw http.ResponseWriter, req *http.Request) {
 			rw.WriteHeader(http.StatusNotImplemented)
 
 			fmt.Fprint(rw, NI501)
 		}
 
-		return &PageHandler{nil, f}, nil
+		return &PageHandler{f}, nil
 	}()
 
 	res["/login"], err = func() (*PageHandler, error) {
@@ -109,13 +127,13 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 			BackURL  string
 		}
 
-		tmpl, err := template.ParseFiles("./html/login_tmpl.html")
+		tmp, err := template.ParseFiles("./html/login_tmpl.html")
 
 		if err != nil {
 			return nil, errors.New("Failed to load ./html/login_tmpl.html")
 		}
 
-		f := func(tmp *template.Template, rw http.ResponseWriter, req *http.Request) {
+		f := func(rw http.ResponseWriter, req *http.Request) {
 			if req.Method == "GET" {
 				req.ParseForm()
 				rw.WriteHeader(http.StatusOK)
@@ -191,38 +209,38 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 		}
 
-		return &PageHandler{tmpl, f}, nil
+		return &PageHandler{f}, nil
 	}()
 
 	res["/logout"], err = func() (*PageHandler, error) {
-		f := func(tmp *template.Template, rw http.ResponseWriter, req *http.Request) {
+		f := func(rw http.ResponseWriter, req *http.Request) {
 			session := ParseSession(req)
-			
+
 			if session != nil {
 				mainDB.SessionRemove(*session)
 			}
-			
+
 			cookie := http.Cookie{
-				Name: "session",
-				Value: *session,
+				Name:   "session",
+				Value:  *session,
 				MaxAge: 0,
 			}
-			
+
 			http.SetCookie(rw, &cookie)
 			RespondRedirection(rw, "/")
 		}
 
-		return &PageHandler{nil, f}, nil
+		return &PageHandler{f}, nil
 	}()
 
 	res["/userinfo"], err = func() (*PageHandler, error) {
-		tmpl, err := template.ParseFiles("./html/userinfo_tmpl.html")
+		tmp, err := template.ParseFiles("./html/userinfo_tmpl.html")
 
 		if err != nil {
 			return nil, err
 		}
 
-		f := func(tmp *template.Template, rw http.ResponseWriter, req *http.Request) {
+		f := func(rw http.ResponseWriter, req *http.Request) {
 			user, err := ParseRequestForUseData(req)
 
 			if err != nil {
@@ -235,8 +253,14 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 			tmp.Execute(rw, user)
 		}
 
-		return &PageHandler{tmpl, f}, nil
+		return &PageHandler{f}, nil
 	}()
+
+	// Debug request
+	res["/quit"] = &PageHandler{
+		func(_ http.ResponseWriter, _ *http.Request) {
+			os.Exit(0)
+		}}
 
 	if err != nil {
 		return nil, err
