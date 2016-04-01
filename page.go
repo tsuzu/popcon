@@ -67,9 +67,10 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
             type IndexResp struct {
                 *SessionTemplateData
                 News []News
+				NewsCount int
             }
             
-            resp := &IndexResp{std, news}
+            resp := &IndexResp{std, news, mainDB.showedNewCount}
 
 			rw.WriteHeader(http.StatusOK)
 			tmp.Execute(rw, *resp)

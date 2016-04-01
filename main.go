@@ -14,7 +14,7 @@ func main() {
 
 	// Copy to the global variable
 	mainDB = pmainDB
-    mainDB.showedNewCount = 10
+    mainDB.showedNewCount = 5
 
 	mux := http.NewServeMux()
 	handlers, err := CreateHandlers()
