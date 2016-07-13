@@ -24,3 +24,4 @@
 - Implement caches of sessions (session.go)
 - Implement /onlinejudge
 - Implement /contests
+- if not existsがないからcreate indexがコケる可能性がある

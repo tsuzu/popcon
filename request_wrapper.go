@@ -1,6 +1,7 @@
 package main
 
 import "net/http"
+import "errors"
 
 // ParseRequestForSession returns a SessionTemplateData object
 // Session is not found:  returns (nil, nil)
@@ -21,7 +22,7 @@ func ParseRequestForUseData(req *http.Request) (*User, error) {
 	sessionID := ParseSession(req)
 
 	if sessionID == nil {
-		return nil, nil
+		return nil, errors.New("Unknown user")
 	}
 
 	return GetSessionUserData(*sessionID)

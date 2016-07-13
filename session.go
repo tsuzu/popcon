@@ -3,49 +3,71 @@ package main
 import "errors"
 import "encoding/hex"
 import "github.com/satori/go.uuid"
+import "time"
 
 // SessionTemplateData contains data in SQL DB
+//"create table if not exists sessions (sessionKey varchar(50) primary key, internalID int(11), unixTimeLimit int(11), index iid(internalID), index idx(unixTimeLimit))"
+type Session struct {
+	SessionKey string `db:"pk" default:"" size:"50"`
+	Iid int64 `default:""`
+	TimeLimit int64 `default:""`
+}
+
 type SessionTemplateData struct {
 	IsSignedIn bool
 	UserID     string
 	UserName   string
 }
 
+func (dm * DatabaseManager) CreateSessionTable() error {
+	err := dm.db.CreateTableIfNotExists(&Session{})
+	
+	if err != nil {
+		return err
+	}
+
+	dm.db.CreateIndex(&Session{}, "iid")
+	dm.db.CreateIndex(&Session{}, "timeLimit")
+
+	return nil
+}
+
 // GetSessionTemplateData returns a SessionTemplateData object
-func GetSessionTemplateData(sessionID string) (*SessionTemplateData, error) {
-	user, err := GetSessionUserData(sessionID)
+func GetSessionTemplateData(sessionKey string) (*SessionTemplateData, error) {
+	user, err := GetSessionUserData(sessionKey)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &SessionTemplateData{true, user.UserID, user.UserName}, nil
+	return &SessionTemplateData{true, user.Uid, user.UserName}, nil
 }
 
 // GetSessionUserData returns an User object
 func GetSessionUserData(sessionID string) (*User, error) {
-	internalID, err := mainDB.SessionFind(sessionID)
+	session, err := mainDB.SessionFind(sessionID)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return mainDB.UserFindFromInternalID(internalID)
+	return mainDB.UserFindFromIID(session.Iid)
 }
 
 // SessionAdd adds a new session
-func (dm *DatabaseManager) SessionAdd(internalID int) (*string, error) {
+func (dm *DatabaseManager) SessionAdd(internalID int64) (*string, error) {
 	var err error
 
 	cnt := 0
 	for {
-		uid := uuid.NewV4()
-		sessionID := hex.EncodeToString(uid[:])
+		u := uuid.NewV4()
+		id := hex.EncodeToString(u[:])
+		session := Session{id, internalID, time.Now().Unix() + int64(720 * time.Hour)}
 
-		_, err = dm.db.Exec("insert into sessions (sessionID, internalID, unixTimeLimit) values(?, ?, unix_timestamp(now()) + 2592000)", sessionID, internalID)
+		_, err = dm.db.Insert(&session)
 
 		if err == nil {
-			return &sessionID, nil
+			return &id, nil
 		}
 
 		if cnt > 3 {
@@ -59,35 +81,25 @@ func (dm *DatabaseManager) SessionAdd(internalID int) (*string, error) {
 
 // SessionFind is to find a session
 // len(sessionID) = 32
-func (dm *DatabaseManager) SessionFind(sessionID string) (int, error) {
-	rows, err := dm.db.Query("select internalID from sessions where sessionID=?", sessionID)
+func (dm *DatabaseManager) SessionFind(sessionKey string) (*Session, error) {
+	var resulsts []Session
+	err := dm.db.Select(&resulsts, dm.db.Where("session_key", "=", sessionKey))
 
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	cnt := 0
-	for rows.Next() {
-		var internalID int
-		err = rows.Scan(&internalID)
-
-		if err == nil {
-			return internalID, nil
-		}
-
-		if cnt > 3 {
-			break
-		}
-		cnt++
+	if len(resulsts) == 0 {
+		return nil, errors.New("Unknown session")
 	}
 
-	return 0, errors.New("error: Not Found")
+	return &resulsts[0], nil
 }
 
 // SessionRemove is to remove session
-// len(sessionID) = 32
-func (dm *DatabaseManager) SessionRemove(sessionID string) error {
-	_, err := dm.db.Exec("delete from sessions where sessionID=?", sessionID)
+// len(sessionKey) = 32
+func (dm *DatabaseManager) SessionRemove(sessionKey string) error {
+	_, err := dm.db.Delete(&Session{SessionKey: sessionKey})
 
 	return err
 }

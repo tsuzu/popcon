@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"text/template"
+	"reflect"
 )
 
 // PageHandlerFuncType is a type of the function used in PageHandler
@@ -174,9 +175,10 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 					return
 				}
 
-				user, err := mainDB.UserFindLight(loginID[0])
+				user, err := mainDB.UserFindFromUserID(loginID[0])
+				passHash := sha512.Sum512([]byte(password[0]))
 
-				if err != nil || user.PassHash != sha512.Sum512([]byte(password[0])) {
+				if err != nil || !reflect.DeepEqual(user.PassHash, passHash[:]) {
 					rw.WriteHeader(http.StatusOK)
 
 					tmp.Execute(rw, LoginTemp{true, backurl[0]})
@@ -184,7 +186,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 					return
 				}
 
-				sessionID, err := mainDB.SessionAdd(user.InternalID)
+				sessionID, err := mainDB.SessionAdd(user.Iid)
 
 				if err != nil {
 					rw.WriteHeader(http.StatusInternalServerError)
