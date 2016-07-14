@@ -51,7 +51,7 @@ func (dm *DatabaseManager) AddNewsWithTime(text string, unixTime time.Time) erro
 }
 
 // GetNews returns `showedNewCount` recent news of 
-func (dm *DatabaseManager) GetNews() ([]News, error) {
+func (dm *DatabaseManager) NewsGet() ([]News, error) {
     var resulsts []News
     err := dm.db.Select(&resulsts, dm.db.OrderBy("unix_time", genmai.DESC).Limit(dm.showedNewCount))
     
