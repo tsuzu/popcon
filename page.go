@@ -101,11 +101,17 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 	res["/onlinejudge/"], err = func() (*PageHandler, error) {
 		ojh := http.StripPrefix("/onlinejudge/", CreateOnlineJudgeHandler())
 
-		if ojh != nil {
+		if ojh == nil {
 			return nil, errors.New("Failed to CreateOnlineJudgeHandler()")
 		}
 
 		f := func(rw http.ResponseWriter, req *http.Request) {
+			rw.WriteHeader(http.StatusNotImplemented)
+
+			fmt.Fprint(rw, NI501)
+
+			return
+
 			ojh.ServeHTTP(rw, req)
 		}
 
@@ -262,7 +268,8 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 	res["/quit"] = &PageHandler{
 		func(_ http.ResponseWriter, _ *http.Request) {
 			os.Exit(0)
-		}}
+		},
+	}
 
 	if err != nil {
 		return nil, err
