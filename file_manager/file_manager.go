@@ -1,4 +1,4 @@
-package main
+package FileManager
 
 import (
 	"os"
@@ -9,6 +9,7 @@ type FileManager struct {
 	fp *os.File
 }
 
+// OpenFile opens the file with 0644 perm
 func OpenFile(path string, mode int, lockToWrite bool) (*FileManager, error) {
 	fd, err := syscall.Open(path, mode, 0644)
 
@@ -48,4 +49,9 @@ func (fm *FileManager) Close() error {
 	syscall.Flock(int(fm.fp.Fd()), syscall.LOCK_UN)
 
 	return fm.fp.Close()
+}
+
+// Debug
+func (fm *FileManager) Fp() *os.File {
+	return fm.fp
 }

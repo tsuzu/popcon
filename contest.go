@@ -2,12 +2,22 @@ package main
 
 import "errors"
 
+type ContestType int
+const (
+    ContestJOI ContestType = 0
+//    ContestICPC ContestType = 1
+//    ContestAtCoder ContestType = 2
+//    ContestPCK ContestType = 3
+)
+
+
 type Contest struct {
     Cid int64 `db:"pk" default:""`
     Name string `default:""`
     StartTime int64 `default:""`
     FinishTime int64 `default:""`
     Admin int64 `default:""`
+    Type ContestType `default:"0"`
 }
 
 func (c *Contest) ProblemAdd(pidx int64, name string, time, mem int64) (*ContestProblem, error) {
@@ -32,12 +42,13 @@ func (dm *DatabaseManager) CreateContestTable() error {
     return nil
 }
 
-func (dm *DatabaseManager) ContestNew(name string, start int64, finish int64, admin int64) (int64, error) {
+func (dm *DatabaseManager) ContestNew(name string, start int64, finish int64, admin int64, ctype ContestType) (int64, error) {
     id, err := dm.db.Insert(Contest{
         Name: name,
         StartTime: start,
         FinishTime: finish,
         Admin: admin,
+        Type: ctype,
     })
 
     if err != nil {
