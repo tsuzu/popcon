@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"time"
+	"fmt"
 )
 
 func main() {
@@ -11,6 +12,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Println(pmainDB.UserAdd("tsuzu", "つづ", "hoge", "hoge@hoge.com", 0))
 
 	// Copy to the global variable
 	mainDB = pmainDB
