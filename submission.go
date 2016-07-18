@@ -40,7 +40,7 @@ type Submission struct {
     Mem int64 `default:""`
     Score int64 `default:""`
     SubmitTime int64 `default:""` //提出日時
-    Status SubmissionStatus `default:""` //index
+    Status int64 `default:""` //index
     Prog uint64 `default:""` //テストケースの進捗状況(完了数<<32 & 全体数)
 }
 
@@ -69,7 +69,7 @@ func (dm *DatabaseManager) SubmissionNew(pid, cid, iid, lang int64, code string)
         Mem: 0,
         Score: 0,
         SubmitTime: time.Now().Unix(),
-        Status: InQueue,
+        Status: int64(InQueue),
         Prog: 0,
     }
 
@@ -164,7 +164,7 @@ func (dm *DatabaseManager) SubmissionUpdate(sid, time, mem int64, status Submiss
 
     sm.Time = time
     sm.Mem = mem
-    sm.Status = status
+    sm.Status = int64(status)
     sm.Prog = uint64(fin) << 32 & uint64(all)
 
     _, err = dm.db.Update(&sm)
