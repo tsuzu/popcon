@@ -21,7 +21,7 @@ type Contest struct {
     StartTime int64 `default:""`
     FinishTime int64 `default:""`
     Admin int64 `default:""`
-    Type ContestType `default:"0"`
+    Type int64 `default:"0"`
 }
 
 func (c *Contest) ProblemAdd(pidx int64, name string, time, mem int64) (*ContestProblem, error) {
@@ -54,7 +54,7 @@ func (dm *DatabaseManager) ContestNew(name string, start int64, finish int64, ad
         StartTime: start,
         FinishTime: finish,
         Admin: admin,
-        Type: ctype,
+        Type: int64(ctype),
     })
 
     if err != nil {

@@ -14,8 +14,8 @@ type ContestsTopHandler struct {
 func CreateContestsTopHandler() (*ContestsTopHandler, error) {
     funcs := template.FuncMap{
         "TimeRangeToString": TimeRangeToString,
-        "ContestTypeToString": func(t ContestType) string {
-            return ContestTypeToString[t]
+        "ContestTypeToString": func(t int64) string {
+            return ContestTypeToString[ContestType(t)]
         },
     }
 
