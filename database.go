@@ -72,5 +72,23 @@ func NewDatabaseManager() (*DatabaseManager, error) {
         return nil, err
     }
 
+	err = dm.CreateContestTable()
+	
+	if err != nil {
+        return nil, err
+    }
+	
+	err = dm.CreateContestProblemTable()
+	
+	if err != nil {
+        return nil, err
+    }
+	
+	err = dm.CreateSubmissionTable()
+
+	if err != nil {
+        return nil, err
+    }
+	
 	return dm, nil
 }

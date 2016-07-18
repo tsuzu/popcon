@@ -10,6 +10,10 @@ const (
 //    ContestPCK ContestType = 3
 )
 
+var ContestTypeToString = map[ContestType]string{
+    ContestJOI: "JOI",
+}
+
 
 type Contest struct {
     Cid int64 `db:"pk" default:""`
@@ -38,7 +42,9 @@ func (dm *DatabaseManager) CreateContestTable() error {
     }
 
     dm.db.CreateUniqueIndex(&Contest{}, "name")
-
+    dm.db.CreateIndex(&Contest{}, "start_time")
+    dm.db.CreateIndex(&Contest{}, "finish_time")
+    
     return nil
 }
 
@@ -72,4 +78,28 @@ func (dm *DatabaseManager) ContestFind(cid int64) (*Contest, error) {
     }
 
     return &resulsts[0], nil
+}
+
+func (dm *DatabaseManager) ContestCount(options ...interface{}) (int64, error) {
+    var count int64
+
+    err := dm.db.Select(&count, dm.db.Count(), dm.db.From(&Contest{}), options)
+
+    if err != nil {
+        return 0, err
+    }
+
+    return count, nil
+}
+
+func (dm *DatabaseManager) ContestList(options ...interface{}) (*[]Contest, error) {
+    var resulsts []Contest
+
+    err := dm.db.Select(&resulsts, options)
+
+    if err != nil {
+        return nil, err
+    }
+
+    return &resulsts, nil
 }
