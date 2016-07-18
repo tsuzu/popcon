@@ -20,9 +20,7 @@ type PageHandler struct {
 
 // PassHandler is a function that pass a handler
 func (ph *PageHandler) PassHandler() func(http.ResponseWriter, *http.Request) {
-	return func(rw http.ResponseWriter, req *http.Request) {
-		ph.Callback(rw, req)
-	}
+	return ph.Callback
 }
 
 // FuncHandlerWrapepr is for FuncToHandler
@@ -118,6 +116,10 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 		return &PageHandler{f}, nil
 	}()
 
+	if err != nil {
+		return nil, err
+	}
+
 	res["/contests/"], err = func() (*PageHandler, error) {
 		contestsTopHandler, err := CreateContestsTopHandler()
 
@@ -127,12 +129,17 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 		handler := http.StripPrefix("/contests", *contestsTopHandler)
 
+
 		f := func(rw http.ResponseWriter, req *http.Request) {
 			handler.ServeHTTP(rw, req)
 		}
 
 		return &PageHandler{f}, nil
 	}()
+
+	if err != nil {
+		return nil, err
+	}
 
 	res["/login"], err = func() (*PageHandler, error) {
 		type LoginTemp struct {
@@ -226,6 +233,10 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 		return &PageHandler{f}, nil
 	}()
 
+	if err != nil {
+		return nil, err
+	}
+
 	res["/logout"], err = func() (*PageHandler, error) {
 		f := func(rw http.ResponseWriter, req *http.Request) {
 			session := ParseSession(req)
@@ -246,6 +257,10 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 		return &PageHandler{f}, nil
 	}()
+
+	if err != nil {
+		return nil, err
+	}
 
 	res["/userinfo"], err = func() (*PageHandler, error) {
 		tmp, err := template.ParseFiles("./html/userinfo_tmpl.html")
@@ -269,6 +284,10 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 		return &PageHandler{f}, nil
 	}()
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Debug request
 	res["/quit"] = &PageHandler{

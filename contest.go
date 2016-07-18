@@ -1,6 +1,7 @@
 package main
 
 import "errors"
+import "github.com/naoina/genmai"
 
 type ContestType int
 const (
@@ -49,7 +50,7 @@ func (dm *DatabaseManager) CreateContestTable() error {
 }
 
 func (dm *DatabaseManager) ContestNew(name string, start int64, finish int64, admin int64, ctype ContestType) (int64, error) {
-    id, err := dm.db.Insert(Contest{
+    id, err := dm.db.Insert(&Contest{
         Name: name,
         StartTime: start,
         FinishTime: finish,
@@ -80,7 +81,7 @@ func (dm *DatabaseManager) ContestFind(cid int64) (*Contest, error) {
     return &resulsts[0], nil
 }
 
-func (dm *DatabaseManager) ContestCount(options ...interface{}) (int64, error) {
+func (dm *DatabaseManager) ContestCount(options *genmai.Condition) (int64, error) {
     var count int64
 
     err := dm.db.Select(&count, dm.db.Count(), dm.db.From(&Contest{}), options)
@@ -92,10 +93,16 @@ func (dm *DatabaseManager) ContestCount(options ...interface{}) (int64, error) {
     return count, nil
 }
 
-func (dm *DatabaseManager) ContestList(options ...interface{}) (*[]Contest, error) {
+func (dm *DatabaseManager) ContestList(options ...*genmai.Condition) (*[]Contest, error) {
     var resulsts []Contest
 
-    err := dm.db.Select(&resulsts, options)
+    opt := make([]interface{}, len(options))
+
+    for i := range options {
+        opt[i] = options[i]
+    }
+
+    err := dm.db.Select(&resulsts, opt...)
 
     if err != nil {
         return nil, err

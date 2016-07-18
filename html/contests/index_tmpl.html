@@ -7,13 +7,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>popcon</title>
     <!--Bootstrap CSS-->
-    <link href="./static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
     <!--jQuery-->
-    <script src="./static/js/jquery-1.12.2.min.js"></script>
+    <script src="/static/js/jquery-1.12.2.min.js"></script>
     <!--Bootstrap JS-->
-    <script src="./static/js/bootstrap.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
     <!--footerFixed JS-->
-    <script src="./static/js/footer-fixed.js"></script>
+    <script src="/static/js/footer-fixed.js"></script>
     <style>
         #footer {
             text-align: center;
@@ -63,15 +63,15 @@
             <div class="row">
                 <div class="col-md-4">
                     <ul class="nav nav-pills">
-                        <li role="presentation" class="active"><a href=".">現在</a></li>
-                        <li role="presentation"><a href="./coming">未来</a></li>
-                        <li role="presentation"><a href="./closed">過去</a></li>
+                        <li role="presentation" {{if (eq .Type 0)}}class="active" {{end}}><a href="/contests/">現在</a></li>
+                        <li role="presentation" {{if (eq .Type 1)}}class="active" {{end}}><a href="/contests/coming/">未来</a></li>
+                        <li role="presentation" {{if (eq .Type 2)}}class="active" {{end}}><a href="/contests/closed/">過去</a></li>
                     </ul>
                 </div>
             </div>
             <!--            <div class="row">
                 <div class="col-md-8">-->
-            <div class="panel panel-default">
+            <div style="margin-top:5px;" class="panel panel-default">
                 <table class="table">
                     <thead>
                         <tr>
@@ -84,17 +84,45 @@
                     <tbody>
                         {{range .Contests}}
                         <tr>
-                            <a href="./{{.Cid}}"><td>{{html .Name}}</td></a>
-                            <td>{{html (TimeRangeToString .StartTime .FinishTime)}}</td>
-                            <td>{{html (ContestTypeToString .Type)}}</td>
+                            <td><a href="./{{.Cid}}">{{html .Name}}</a></td>
+                            <td>{{html (timeRangeToString .StartTime .FinishTime)}}</td>
+                            <td>{{html (contestTypeToString .Type)}}</td>
                         </tr>
                         {{else}}
                         <tr>
-                            <td>開催中のコンテストはありません。</td>
+                            <td>該当するコンテストはありません。</td>
                         </tr>
                         {{end}}
                     </tbody>
                 </table>
+            </div>
+            <div style="text-align: center;">
+                <ul class="pagination" >
+                    {{if ne .Current 1}}
+                        <li>
+                            <a href="#" aria-label="前のページへ">
+                                <span aria-hidden="true">«</span>
+                            </a>
+                        </li>
+                    {{end}}
+
+                    {{range .Pagenation}}
+                        {{if (eq .Page -1)}}
+                            <li class="disabled"><a href="./?p={{.Page}}">...</a></li>
+                        {{else}}
+                            <li {{if .IsActive}}class="active"{{end}}>
+                                <a href="./?p={{.Page}}">{{.Page}}</a>
+                            </li>
+                        {{end}}
+                    {{end}}
+                    {{if ne .Current .MaxPage}}
+                    <li>
+                        <a href="#" aria-label="次のページへ">
+                            <span aria-hidden="true">»</span>
+                        </a>
+                    </li>
+                    {{end}}
+                </ul>
             </div>
             <!--                </div>
             </div>-->

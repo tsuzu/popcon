@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 	"time"
-	"fmt"
 )
 
 func main() {
@@ -13,7 +12,12 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(pmainDB.UserAdd("tsuzu", "つづ", "hoge", "hoge@hoge.com", 0))
+/*	fmt.Println(pmainDB.UserAdd("tsuzu", "つづ", "hoge", "hoge@hoge.com", 0))
+	fmt.Println(pmainDB.ContestNew("Hoge", time.Date(2016, 7, 18, 0, 0, 0, 0, time.FixedZone("Asia/Tokyo", 9*60*60)).Unix(), time.Date(2016, 7, 19, 22, 0, 0, 0, time.FixedZone("Asia/Tokyo", 9*60*60)).Unix(), 1, ContestJOI))
+
+	for i := 0; i < 300; i++ {
+		pmainDB.ContestNew("テキトーコンテスト" + fmt.Sprint(i), time.Date(2016, 7, 18, 0, 0, 0, 0, time.FixedZone("Asia/Tokyo", 9*60*60)).Unix(), time.Date(2016, 7, 19, 22, 0, 0, 0, time.FixedZone("Asia/Tokyo", 9*60*60)).Unix(), 1, ContestJOI)
+	}*/
 
 	// Copy to the global variable
 	mainDB = pmainDB
