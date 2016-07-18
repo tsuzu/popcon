@@ -119,10 +119,16 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 	}()
 
 	res["/contests/"], err = func() (*PageHandler, error) {
-		f := func(rw http.ResponseWriter, req *http.Request) {
-			rw.WriteHeader(http.StatusNotImplemented)
+		contestsTopHandler, err := CreateContestsTopHandler()
 
-			fmt.Fprint(rw, NI501)
+		if err != nil {
+			return nil, err
+		}
+
+		handler := http.StripPrefix("/contests", *contestsTopHandler)
+
+		f := func(rw http.ResponseWriter, req *http.Request) {
+			handler.ServeHTTP(rw, req)
 		}
 
 		return &PageHandler{f}, nil
