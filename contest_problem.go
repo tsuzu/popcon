@@ -12,6 +12,12 @@ import (
 
 const ContestProblemsDir = "./contest_problems/"
 
+type JudgeType int
+
+const (
+    PerfectMatch JudgeType = 0
+)
+
 type ContestProblem struct {
     Pid int64 `db:"pk"`
     Cid int64 `default:""`
@@ -20,6 +26,7 @@ type ContestProblem struct {
     Time int64 `default:""` // ms
     Mem int64 `default:""` // KB
     LastModified int64 `default:""`
+    Type int `default:""`
 }
 
 func (cp *ContestProblem) UpdateStatement(text string) error {
@@ -242,7 +249,7 @@ func (dm *DatabaseManager) CreateContestProblemTable() error {
     return nil
 }
 
-func (dm *DatabaseManager) ContestProblemNew(cid, pidx int64, name string, timel, mem int64) (int64, error) {
+func (dm *DatabaseManager) ContestProblemNew(cid, pidx int64, name string, timel, mem int64, jtype JudgeType) (int64, error) {
     prob := ContestProblem{
         Cid: cid,
         Pidx: pidx,
@@ -250,6 +257,7 @@ func (dm *DatabaseManager) ContestProblemNew(cid, pidx int64, name string, timel
         Time: timel,
         Mem: mem,
         LastModified: time.Now().Unix(),
+        Type: int(jtype),
     }
 
     i, err := dm.db.Insert(prob)

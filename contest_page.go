@@ -30,7 +30,7 @@ func CreateContestsTopHandler() (*ContestsTopHandler, error) {
     temp = temp.Lookup("index_tmpl.html")
 
     if temp == nil {
-        return nil, errors.New("Unknown temp")
+        return nil, errors.New("Failed to load /contests/index_temp.html")
     }
 
     return &ContestsTopHandler{temp, 50}, nil
@@ -66,25 +66,24 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
     timeNow := time.Now().Unix()
     var reqType int
 
-    if req.URL.Path == "/" {
-        reqType = 0
-        cond = mainDB.db.Where("start_time", "<=", timeNow).And(mainDB.db.Where("finish_time", ">=", timeNow))
-    }else if req.URL.Path == "/coming/" {
-        reqType = 1
-        cond = mainDB.db.Where("start_time", ">", timeNow)
-    }else if req.URL.Path == "/closed/" {
-        reqType = 2
-        cond = mainDB.db.Where("finish_time", "<", timeNow)
-    }else {
-        // 各コンテストとコンテスト新規作成
-
-        rw.WriteHeader(http.StatusNotImplemented)
+    switch req.URL.Path {
+        case "/":
+            reqType = 0
+            cond = mainDB.db.Where("start_time", "<=", timeNow).And(mainDB.db.Where("finish_time", ">=", timeNow))
+        case "/coming/":
+            reqType = 1
+            cond = mainDB.db.Where("start_time", ">", timeNow)
+        case "/closed/":
+            reqType = 2
+            cond = mainDB.db.Where("finish_time", "<", timeNow)
+        default:
+            rw.WriteHeader(http.StatusNotImplemented)
         
-        rw.Write([]byte(NI501))
+            rw.Write([]byte(NI501))
 
-        return
+            return
     }
-    
+
     page := 1
 
     if queryArr, has := req.Form["p"]; has {
@@ -149,4 +148,10 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 
 }
 
+func (dm *DatabaseManager) ContestEachHandler(cid int64, rw http.ResponseWriter, req *http.Request) {
+    if req.URL.Path = "/" {
+        desc, err := dm.ContestDescriptionLoad(cid)
 
+        
+    }
+}

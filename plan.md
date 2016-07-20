@@ -28,6 +28,10 @@
 - submissionのDB操作を実装
 
 # contestのフォルダ構成
+- ./contests
+    - XXX(cid) ... コンテストトップページのhtml(XSS対策)
+
+# contest_problemsのフォルダ構成
 - ./contest_problems
     - XXX(pid)/
         - prob ... 問題文(サンプルを含む)のhtml or Markdown
