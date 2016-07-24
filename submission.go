@@ -79,7 +79,7 @@ func (dm *DatabaseManager) SubmissionNew(pid, cid, iid, lang int64, code string)
         return 0, err
     }
 
-    err = os.MkdirAll(SubmissionDir + strconv.FormatInt(id, 10), 0644)
+    err = os.MkdirAll(SubmissionDir + strconv.FormatInt(id, 10), os.ModePerm)
 
     if err != nil {
         //SubmissionDelete

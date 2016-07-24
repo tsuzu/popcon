@@ -114,6 +114,38 @@ func (dm *DatabaseManager) ContestFind(cid int64) (*Contest, error) {
     return &resulsts[0], nil
 }
 
+func (dm *DatabaseManager) ContestDescriptionUpdate(cid int64, desc string) error {
+    fm, err := FileManager.OpenFile(ContestDir + strconv.FormatInt(cid, 10), os.O_WRONLY, true)
+
+    if err != nil {
+        return err
+    }
+
+    defer fm.Close()
+
+    _, err = fm.Write([]byte(desc))
+
+    return err
+}
+
+func (dm *DatabaseManager) ContestDescriptionLoad(cid int64) (string, error) {
+    fm, err := FileManager.OpenFile(ContestDir + strconv.FormatInt(cid, 10), os.O_RDONLY, false)
+
+    if err != nil {
+        return "", err
+    }
+
+    defer fm.Close()
+
+    b, err := ioutil.ReadAll(fm)
+
+    if err != nil {
+        return "", err
+    }
+
+    return string(b), err
+}
+
 func (dm *DatabaseManager) ContestCount(options ...*genmai.Condition) (int64, error) {
     var count int64
 
@@ -133,40 +165,6 @@ func (dm *DatabaseManager) ContestCount(options ...*genmai.Condition) (int64, er
     }
 
     return count, nil
-}
-
-func (dm *DatabaseManager) ContestDescriptionUpdate(cid int64, desc string) error {
-    fm, err := FileManager.OpenFile(ContestDir + strconv.FormatInt(cid, 10), os.O_WRONLY, true)
-
-    if err != nil {
-        return err
-    }
-
-    defer fm.Close()
-
-    _, err = fm.Write([]byte(desc))
-
-    return err
-}
-
-func (dm *DatabaseManager) ContestDescriptionLoad(cid int64) (*string, error) {
-    fm, err := FileManager.OpenFile(ContestDir + strconv.FormatInt(cid, 10), os.O_RDONLY, false)
-
-    if err != nil {
-        return nil, err
-    }
-
-    defer fm.Close()
-
-    b, err := ioutil.ReadAll(fm)
-
-    if err != nil {
-        return nil, err
-    }
-
-    str := string(b)
-
-    return &str, err
 }
 
 func (dm *DatabaseManager) ContestList(options ...*genmai.Condition) (*[]Contest, error) {

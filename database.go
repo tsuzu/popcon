@@ -89,6 +89,12 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 	if err != nil {
         return nil, err
     }
+
+	err = dm.CreateContestParticipationManager()
+
+	if err != nil {
+		return nil, err
+	}
 	
 	return dm, nil
 }

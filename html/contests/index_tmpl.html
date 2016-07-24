@@ -80,7 +80,7 @@
                     <tbody>
                         {{range .Contests}}
                         <tr>
-                            <td><a href="./{{.Cid}}">{{html .Name}}</a></td>
+                            <td><a href="/contests/{{.Cid}}/">{{html .Name}}</a></td>
                             <td>{{html (timeRangeToString .StartTime .FinishTime)}}</td>
                             <td>{{html (contestTypeToString .Type)}}</td>
                         </tr>
@@ -125,6 +125,9 @@
             <footer class="container-fluid" id="footer">
                 <small>Copyright (C) 2016 Tsuzu All Rights Reserved.</small>
             </footer>
+        </div>
+    </div>
+
 </body>
 
 </html>

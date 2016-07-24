@@ -3,3 +3,6 @@ bin/*
 popcon
 deploy.sh
 .VSCode/
+contests/
+contest_problems/
+submissions/

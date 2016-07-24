@@ -7,10 +7,13 @@ import "text/template"
 import "strconv"
 import "fmt"
 import "errors"
+import "net/url"
+import "strings"
 
 type ContestsTopHandler struct {
     Temp *template.Template
     NumPerPage int
+    EachHandler *ContestEachHandler
 }
 
 func CreateContestsTopHandler() (*ContestsTopHandler, error) {
@@ -33,7 +36,13 @@ func CreateContestsTopHandler() (*ContestsTopHandler, error) {
         return nil, errors.New("Failed to load /contests/index_temp.html")
     }
 
-    return &ContestsTopHandler{temp, 50}, nil
+    ceh, err := CreateContestEachHandler()
+
+    if err != nil {
+        return nil, err
+    }
+
+    return &ContestsTopHandler{temp, 50, ceh}, nil
 }
 
 func TimeRangeToString(start, finish int64) string {
@@ -47,7 +56,7 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
     std, err := ParseRequestForSession(req)
 
 	if std == nil || err != nil || !std.IsSignedIn {
-		RespondRedirection(rw, "/contests")
+		RespondRedirection(rw, "/login?comeback=/contests" + url.QueryEscape(req.URL.Path))
 
         return
 	}
@@ -69,18 +78,54 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
     switch req.URL.Path {
         case "/":
             reqType = 0
-            cond = mainDB.db.Where("start_time", "<=", timeNow).And(mainDB.db.Where("finish_time", ">=", timeNow))
+            cond = mainDB.db.Where("start_time", "<=", timeNow).And(mainDB.db.Where("finish_time", ">", timeNow))
         case "/coming/":
             reqType = 1
             cond = mainDB.db.Where("start_time", ">", timeNow)
         case "/closed/":
             reqType = 2
-            cond = mainDB.db.Where("finish_time", "<", timeNow)
-        default:
+            cond = mainDB.db.Where("finish_time", "<=", timeNow)
+        case "/new/":
             rw.WriteHeader(http.StatusNotImplemented)
         
             rw.Write([]byte(NI501))
+        default:
+            if len(req.URL.Path) == 0 {
+                RespondRedirection(rw, "/contests/")
 
+                return
+            }
+
+            idx := strings.Index(req.URL.Path[1:], "/")
+
+            if idx == -1 {
+                RespondRedirection(rw, "/contests" + req.URL.Path + "/")
+
+                return
+            }
+
+            cidStr := req.URL.Path[1:][:idx]
+
+            cid, err := strconv.ParseInt(cidStr, 10, 64)
+
+            if err != nil {
+                rw.WriteHeader(http.StatusNotFound)
+                rw.Write([]byte(NF404))
+
+                return
+            }
+
+            handler, err := ch.EachHandler.GetHandler(cid, *std)
+
+            if err != nil {
+                rw.WriteHeader(http.StatusNotFound)
+                rw.Write([]byte(NF404))
+
+                return
+            }
+
+            http.StripPrefix("/" + cidStr, handler).ServeHTTP(rw, req)
+            
             return
     }
 
@@ -146,12 +191,4 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
     rw.WriteHeader(http.StatusOK)
     ch.Temp.Execute(rw, templateVal)
 
-}
-
-func (dm *DatabaseManager) ContestEachHandler(cid int64, rw http.ResponseWriter, req *http.Request) {
-    if req.URL.Path = "/" {
-        desc, err := dm.ContestDescriptionLoad(cid)
-
-        
-    }
 }

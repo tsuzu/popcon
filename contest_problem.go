@@ -8,6 +8,7 @@ import (
     "github.com/cs3238-tsuzu/popcon/file_manager"
 	"io/ioutil"
 	"encoding/json"
+	"github.com/naoina/genmai"
 )
 
 const ContestProblemsDir = "./contest_problems/"
@@ -15,7 +16,7 @@ const ContestProblemsDir = "./contest_problems/"
 type JudgeType int
 
 const (
-    PerfectMatch JudgeType = 0
+    JudgePerfectMatch JudgeType = 0
 )
 
 type ContestProblem struct {
@@ -23,9 +24,10 @@ type ContestProblem struct {
     Cid int64 `default:""`
     Pidx int64 `default:""`
     Name string `default:"" size:"256"`
-    Time int64 `default:""` // ms
-    Mem int64 `default:""` // KB
+    Time int64 `default:""` // Second
+    Mem int64 `default:""` // MB
     LastModified int64 `default:""`
+    Score int `default:""`
     Type int `default:""`
 }
 
@@ -38,10 +40,12 @@ func (cp *ContestProblem) UpdateStatement(text string) error {
 
     fm.Write([]byte(text))
 
+    fm.Close()
+
     return nil
 }
 
-func (cp *ContestProblem) LoadStatement(text string) (*string, error) {
+func (cp *ContestProblem) LoadStatement() (*string, error) {
     fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/prob", os.O_RDONLY | os.O_CREATE, false)
 
     if err != nil {
@@ -73,6 +77,18 @@ type ScoreSet struct {
 }
 
 func (cp *ContestProblem) UpdateTestCases(cases []TestCase, scores []ScoreSet) error {
+    scoreSum := 0
+    for i := range scores {
+        scoreSum += scores[i].Score
+    }
+
+    cp.Score = scoreSum
+    err := mainDB.ContestProblemUpdate(*cp)
+
+    if err != nil {
+        return err
+    }
+    
     fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/.cases_lock", os.O_RDONLY | os.O_WRONLY, true)
 
     if err != nil {
@@ -144,8 +160,8 @@ func (cp *ContestProblem) UpdateTestCases(cases []TestCase, scores []ScoreSet) e
 
     tcj.Scores = scores
     
-    for x := range cases {
-        tcj.CaseNames[x] = cases[x].Name
+    for i := range cases {
+        tcj.CaseNames[i] = cases[i].Name
     }
 
     json.Marshal(tcj)
@@ -173,7 +189,7 @@ func (cp *ContestProblem) LoadTestCases() (*[]TestCase, *[]ScoreSet, error) {
     type TestCaseJson struct {
         CaseNames map[int]string `json:"case_names"`
         Scores []ScoreSet `json:"scores"`
-    }    
+    }
 
     b, err := ioutil.ReadAll(fp)
 
@@ -245,6 +261,7 @@ func (dm *DatabaseManager) CreateContestProblemTable() error {
 
     dm.db.CreateIndex(&ContestProblem{}, "cid")
     dm.db.CreateIndex(&ContestProblem{}, "pidx")
+    dm.db.CreateUniqueIndex(&ContestProblem{}, "pidx", "cid")
 
     return nil
 }
@@ -260,24 +277,16 @@ func (dm *DatabaseManager) ContestProblemNew(cid, pidx int64, name string, timel
         Type: int(jtype),
     }
 
-    i, err := dm.db.Insert(prob)
+    i, err := dm.db.Insert(&prob)
 
     if err != nil {
         return 0, err
     }
 
-    err = os.MkdirAll(ContestProblemsDir + strconv.FormatInt(i, 10), 0644)
+    err = os.MkdirAll(ContestProblemsDir + strconv.FormatInt(i, 10) + "/cases/", os.ModePerm)
 
     if err != nil {
-        dm.ContestProblemDelete(i)
-
-        return 0, err
-    }
-
-    err = os.MkdirAll(ContestProblemsDir + strconv.FormatInt(i, 10) + "/cases", 0644)
-
-    if err != nil {
-        dm.ContestProblemDelete(i)
+        //dm.ContestProblemDelete(i)
 
         return 0, err
     }
@@ -304,6 +313,12 @@ func (dm *DatabaseManager) ContestProblemNew(cid, pidx int64, name string, timel
     fm.Close()
 
     return i, err
+}
+
+func (dm *DatabaseManager) ContestProblemUpdate(prob ContestProblem) error {
+    _, err := dm.db.Update(&prob)
+
+    return err
 }
 
 func (dm *DatabaseManager) ContestProblemDelete(pid int64) error {
@@ -346,4 +361,32 @@ func (dm *DatabaseManager) ContestProblemFind(pid int64) (*ContestProblem, error
     }
 
     return &resulsts[0], nil
+}
+
+func (dm *DatabaseManager) ContestProblemFind2(cid, pidx int64) (*ContestProblem, error) {
+    var resulsts []ContestProblem
+
+    err := dm.db.Select(&resulsts, dm.db.Where("pidx", "=", pidx).And("cid", "=", cid))
+
+    if err != nil {
+        return nil, err
+    }
+
+    if len(resulsts) == 0 {
+        return nil, errors.New("Unknown problem")
+    }
+
+    return &resulsts[0], nil
+}
+
+func (dm *DatabaseManager) ContestProblemList(cid int64) (*[]ContestProblem, error) {
+    var results []ContestProblem
+
+    err := dm.db.Select(&results, dm.db.Where("cid", "=", cid), dm.db.OrderBy("pidx", genmai.ASC))
+
+    if err != nil {
+        return nil, err
+    }
+
+    return &results, nil
 }
