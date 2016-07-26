@@ -54,8 +54,8 @@
             <string>Failed</strong>: IDまたはパスワードが間違っています。
         </div>
         {{end}}
-        <form method="post" action="/login">
-          <input type="hidden" name="comeback" value="{{.BackURL}}">
+        <form method="post" action="/login" autocomplete="off">
+          <input type="hidden" name="comeback" value="{{html .BackURL}}">
           <div class="form-group">
             <label for="InputLoginID">ユーザID</label>
             <div class="row">
@@ -76,7 +76,7 @@
         </form>
     </div>
     <footer class="container-fluid" id="footer">
-        <small>Copyright (C) 2016 Tsuzu All Rights Reserved.</small>
+        <small>© 2016 Tsuzu</small>
     </footer>
 </body>
 </html>

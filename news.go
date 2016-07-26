@@ -8,7 +8,7 @@ import "github.com/naoina/genmai"
 // News contains news showed on "/"
 type News struct {
 	Text     string    `default:""`
-	UnixTime time.Time `default:"" size:"1024"`
+	UnixTime int64 `default:"" size:"1024"`
 }
 
 func (dm *DatabaseManager) CreateNewsTable() error {
@@ -30,7 +30,7 @@ func (dm *DatabaseManager) NewsAdd(text string) error {
 		return errors.New("len(text) > 256")
 	}
 
-	_, err := dm.db.Insert(&News{text, time.Now()})
+	_, err := dm.db.Insert(&News{text, time.Now().Unix()})
 
 	//_, err := dm.db.Exec("insert into news (text, unixTime) values(?, unix_timestamp(now()))", text)
 
@@ -44,7 +44,7 @@ func (dm *DatabaseManager) NewsAddWithTime(text string, unixTime time.Time) erro
 		return errors.New("len(text) > 256")
 	}
 
-	_, err := dm.db.Insert(&News{text, unixTime})
+	_, err := dm.db.Insert(&News{text, unixTime.Unix()})
 
 	return err
 }

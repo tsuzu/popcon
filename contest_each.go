@@ -24,6 +24,11 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
         return nil, err
     }
 
+    free := check
+    if cont.FinishTime <= time.Now().Unix() {
+        free = true
+    }
+
     mux := http.NewServeMux()
 
     mux.HandleFunc("/", func(rw http.ResponseWriter, req *http.Request){
@@ -49,17 +54,12 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
             desc = ""
         }
 
-        joined := check
-        if cont.FinishTime <= time.Now().Unix() {
-            joined = true
-        }
-
         templateVal := TemplateVal{
             UserName: std.UserName,
             Cid: cid,
             ContestName: cont.Name,
             Description: template.HTML(desc),
-            NotJoined: !joined,
+            NotJoined: !free,
         }
 
         rw.WriteHeader(http.StatusOK)
@@ -67,7 +67,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
     })
 
     mux.HandleFunc("/problems/", func(rw http.ResponseWriter, req *http.Request) {
-        if !check {
+        if !free {
             RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/")
 
             return
@@ -140,6 +140,40 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
             ceh.ProbView.Execute(rw, templateVal)
         })).ServeHTTP(rw, req)
     })
+
+    mux.Handle("/submissions/", http.StripPrefix("/submissions/", http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+        if req.URL.Path == "" {
+            /*wrapForm := func(str string) int64 {
+                arr, has := req.Form["status"]
+                if has && len(arr) != 0 {
+                    val, err := strconv.ParseInt(arr[0], 10, 64)
+
+                    if err != nil {
+                        return -1
+                    }else {
+                        return val
+                    }
+                }
+                return -1
+            }
+
+            wrapFormStr := func(str string) string {
+                arr, has := req.Form["status"]
+                if has && len(arr) != 0 {
+                    return arr[0]
+                }
+                return ""
+            }*/
+
+            /*stat := wrapForm("status")
+            lang := wrapForm("lang")
+            prob := wrapForm("prob")
+            page := wrapForm("p")
+            userID := wrapFormStr("user")
+            */
+
+        }
+    })))
 
     mux.HandleFunc("/join", func(rw http.ResponseWriter, req *http.Request){
         if req.Method == "GET" {

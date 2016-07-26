@@ -277,7 +277,9 @@ func (dm *DatabaseManager) ContestProblemNew(cid, pidx int64, name string, timel
         Type: int(jtype),
     }
 
-    i, err := dm.db.Insert(&prob)
+    _, err := dm.db.Insert(&prob)
+
+    i := prob.Pid
 
     if err != nil {
         return 0, err

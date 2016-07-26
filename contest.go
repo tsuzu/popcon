@@ -55,29 +55,31 @@ func (dm *DatabaseManager) CreateContestTable() error {
 }
 
 func (dm *DatabaseManager) ContestNew(name string, start int64, finish int64, admin int64, ctype ContestType) (int64, error) {
-    id, err := dm.db.Insert(&Contest{
+    cont := Contest{
         Name: name,
         StartTime: start,
         FinishTime: finish,
         Admin: admin,
         Type: int64(ctype),
-    })
+    }
+
+    _, err := dm.db.Insert(&cont)
 
     if err != nil {
         return 0, err
     }
 
-    fm, err := FileManager.OpenFile(ContestDir + strconv.FormatInt(id, 10), os.O_CREATE | os.O_WRONLY, true)
+    fm, err := FileManager.OpenFile(ContestDir + strconv.FormatInt(cont.Cid, 10), os.O_CREATE | os.O_WRONLY, true)
 
     if err != nil {
-        dm.ContestDelete(id)
+        dm.ContestDelete(cont.Cid)
 
         return 0, err
     }
 
     fm.Close()
 
-    return id, nil
+    return cont.Cid, nil
 }
 
 func (dm *DatabaseManager) ContestDelete(cid int64) error {

@@ -30,14 +30,26 @@ const (
     InternalError SubmissionStatus = 9
 )
 
+var SubmissionStatusToString = map[SubmissionStatus]string{
+    InQueue: "WJ",
+    Judging: "JG",
+    Accepted: "AC",
+    WrongAnswer: "WA",
+    TimeLimitExceeded: "TLE",
+    MemoryLimitExceeded: "MLE",
+    RuntimeError: "RE",
+    CompileError: "CE",
+    InternalError: "IE",
+}
+
 type Submission struct {
     Sid int64 `db:"pk" default:""`
     Pid int64 `default:""` //index
     Cid int64 `default:""` //index, onlinejudge->0
     Iid int64 `default:""` //index
     Lang int64 `default:""`
-    Time int64 `default:""`
-    Mem int64 `default:""`
+    Time int64 `default:""` //ms
+    Mem int64 `default:""` //KB
     Score int64 `default:""`
     SubmitTime int64 `default:""` //提出日時
     Status int64 `default:""` //index
@@ -73,7 +85,8 @@ func (dm *DatabaseManager) SubmissionNew(pid, cid, iid, lang int64, code string)
         Prog: 0,
     }
 
-    id, err := dm.db.Insert(&sm)
+    _, err := dm.db.Insert(&sm)
+    id := sm.Sid
 
     if err != nil {
         return 0, err
@@ -82,7 +95,7 @@ func (dm *DatabaseManager) SubmissionNew(pid, cid, iid, lang int64, code string)
     err = os.MkdirAll(SubmissionDir + strconv.FormatInt(id, 10), os.ModePerm)
 
     if err != nil {
-        //SubmissionDelete
+        dm.SubmissionRemove(id)
 
         return 0, err
     }
@@ -90,6 +103,8 @@ func (dm *DatabaseManager) SubmissionNew(pid, cid, iid, lang int64, code string)
     fp, err := os.OpenFile(SubmissionDir + strconv.FormatInt(id, 10) + "/msg", os.O_WRONLY | os.O_CREATE, 0644)
 
     if err != nil {
+        dm.SubmissionRemove(id)
+
         return 0, err
     }
 
@@ -98,6 +113,8 @@ func (dm *DatabaseManager) SubmissionNew(pid, cid, iid, lang int64, code string)
     fp, err = os.OpenFile(SubmissionDir + strconv.FormatInt(id, 10) + "/case", os.O_WRONLY | os.O_CREATE, 0644)
 
     if err != nil {
+        dm.SubmissionRemove(id)
+
         return 0, err
     }
 
@@ -106,6 +123,8 @@ func (dm *DatabaseManager) SubmissionNew(pid, cid, iid, lang int64, code string)
     fp, err = os.OpenFile(SubmissionDir + strconv.FormatInt(id, 10) + "/code", os.O_WRONLY | os.O_CREATE, 0644)
 
     if err != nil {
+        dm.SubmissionRemove(id)
+
         return 0, err
     }
 
@@ -267,4 +286,8 @@ func (dm *DatabaseManager) SubmissionSetCase(sid int64, ss map[int64]SubmissionS
     _, err = fm.Write(b)
 
     return err
+}
+
+func (dm *DatabaseManager) SubmissionCount(cid, iid, lid int64) {
+    //
 }

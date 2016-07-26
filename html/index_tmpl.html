@@ -96,7 +96,7 @@
                         {{range .News}}
                         <tr>
                             <td>{{html .Text}}</td>
-                            <td class="time">{{html .UnixTime}}</td>
+                            <td class="time">{{html (timeToString .UnixTime)}}</td>
                         </tr>
                         {{else}}
                         <tr>
@@ -108,9 +108,9 @@
             </div>
             <!--                </div>
             </div>-->
-            <footer class="container-fluid" id="footer">
-                <small>Copyright (C) 2016 Tsuzu All Rights Reserved.</small>
-            </footer>
+        <footer class="container-fluid" id="footer">
+            <small>© 2016 Tsuzu</small>
+        </footer>
         </div>
     </div>
 </body>

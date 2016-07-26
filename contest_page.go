@@ -18,6 +18,7 @@ type ContestsTopHandler struct {
 
 func CreateContestsTopHandler() (*ContestsTopHandler, error) {
     funcs := template.FuncMap{
+        "add": func(x, y int) int {return x + y},
         "timeRangeToString": TimeRangeToString,
         "contestTypeToString": func(t int64) string {
             return ContestTypeToString[ContestType(t)]
@@ -155,7 +156,7 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
         Type int
         Current int
         MaxPage int
-        Pagenation []PagenationHelper
+        Pagination []PaginationHelper
     }
     var templateVal TemplateVal
     templateVal.UserName = std.UserName
@@ -186,7 +187,7 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
         }
     }
 
-    templateVal.Pagenation = CreatePagenationHelper(templateVal.Current, templateVal.MaxPage, 3)
+    templateVal.Pagination = CreatePaginationHelper(templateVal.Current, templateVal.MaxPage, 3)
 
     rw.WriteHeader(http.StatusOK)
     ch.Temp.Execute(rw, templateVal)

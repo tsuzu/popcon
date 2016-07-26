@@ -4,7 +4,7 @@ import "errors"
 
 // Group is a struct to save GroupData
 type Group struct {
-    Gid int `db:"pk"`
+    Gid int64 `db:"pk"`
     Name string `default:""`
 }
 
@@ -29,14 +29,20 @@ func (dm *DatabaseManager) GroupAdd(groupName string) (int64, error) {
     
 	group := &Group{Name: groupName}
 
-	return dm.db.Insert(&group)
+	_, err := dm.db.Insert(&group)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return group.Gid, nil
 }
 
 // GroupFind finds a group with groupID
-func (dm *DatabaseManager) GroupFind(groupID int) (*Group, error) {
+func (dm *DatabaseManager) GroupFind(gid int) (*Group, error) {
     var resulsts []Group
 
-	err := dm.db.Select(&resulsts, dm.db.Where("gid", "=", groupID))
+	err := dm.db.Select(&resulsts, dm.db.Where("gid", "=", gid))
 	
 	if err != nil {
         return nil, err
@@ -50,8 +56,8 @@ func (dm *DatabaseManager) GroupFind(groupID int) (*Group, error) {
 }
 
 // GroupRemove removes from groups
-func (dm *DatabaseManager) GroupRemove(groupID int) error {
-	_, err := dm.db.Delete(&Group{Gid: groupID})
+func (dm *DatabaseManager) GroupRemove(gid int64) error {
+	_, err := dm.db.Delete(&Group{Gid: gid})
 
 	return err 
 }

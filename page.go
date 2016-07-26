@@ -8,7 +8,12 @@ import (
 	"os"
 	"text/template"
 	"reflect"
+	"time"
 )
+
+func TimeToString(t int64) string {
+	return time.Unix(t, 0).Format("2006/01/02 15:04:05")
+}
 
 // PageHandlerFuncType is a type of the function used in PageHandler
 type PageHandlerFuncType func(http.ResponseWriter, *http.Request)
@@ -44,7 +49,17 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 	var err error
 
 	res["/"], err = func() (*PageHandler, error) {
-		tmp, err := template.ParseFiles("./html/index_tmpl.html")
+		funcs := template.FuncMap{
+			"timeToString": TimeToString,
+		}
+
+		temp, err := template.New("").Funcs(funcs).ParseFiles("./html/index_tmpl.html")
+
+		if err != nil {
+        	return nil, err
+    	}
+
+		tmp := temp.Lookup("index_tmpl.html")
 
 		if err != nil {
 			return nil, errors.New("Failed to load ./html/index_tmpl.html")
@@ -169,7 +184,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 				tmp.Execute(rw, LoginTemp{false, cburl})
 			} else if req.Method == "POST" {
-				if req.ParseForm() != nil {
+				if err := req.ParseForm(); err != nil {
 					rw.WriteHeader(http.StatusBadRequest)
 					rw.Write(nil)
 
@@ -180,7 +195,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 				password, res2 := req.Form["password"]
 				backurl, res3 := req.Form["comeback"]
 
-				if !res || !res2 || !res3 || len(loginID) == 0 || len(password) == 0 || len(backurl) == 0 || len(loginID) > 20 || len(backurl[0]) == 0 {
+				if !res || !res2 || !res3 || len(loginID) == 0 || len(password) == 0 || len(backurl) == 0 || len(loginID) > 20 {
 					rw.WriteHeader(http.StatusBadRequest)
 					fmt.Fprint(rw, BR400)
 
@@ -219,9 +234,10 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 					}
 
 					http.SetCookie(rw, &cookie)
-					RespondRedirection(rw, backurl[0])
+					
+					backurl[0] = "http://azure2.wt6.pw:10065" + backurl[0] // TODO: Load from setting file
 
-					rw.Write(nil)
+					RespondRedirection(rw, backurl[0])
 				}
 			} else {
 				rw.WriteHeader(http.StatusBadRequest)

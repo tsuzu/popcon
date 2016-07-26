@@ -20,7 +20,7 @@ type DatabaseManager struct {
 func NewDatabaseManager() (*DatabaseManager, error) {
 	dm := &DatabaseManager{}
 	var err error
-
+	
 	// pcpjudge Database
 	dm.db, err = genmai.New(&genmai.MySQLDialect{}, "popcon:password@/popcon")
 //	dm.db, err = sql.Open("mysql", "popcon:password@/popcon") // Should change password
@@ -96,5 +96,11 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 		return nil, err
 	}
 	
+	err = dm.CreateLanguageTable()
+
+	if err != nil {
+		return nil, err
+	}
+
 	return dm, nil
 }
