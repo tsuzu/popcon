@@ -392,3 +392,28 @@ func (dm *DatabaseManager) ContestProblemList(cid int64) (*[]ContestProblem, err
 
     return &results, nil
 }
+
+type ContestProblemLight struct {
+    Pidx int64
+    Name string
+}
+
+func (dm *DatabaseManager) ContestProblemListLight(cid int64) (*[]ContestProblemLight, error) {
+    results := make([]ContestProblemLight, 0, 50)
+
+    rows, err := dm.db.DB().Query("select pidx, name from contest_problem where cid = ?", cid)
+
+    if err != nil {
+        return nil, err
+    }
+
+    for rows.Next() {
+        var cpl ContestProblemLight
+
+        rows.Scan(&cpl.Pidx, &cpl.Name)
+
+        results = append(results, cpl)
+    }
+
+    return &results, nil
+}

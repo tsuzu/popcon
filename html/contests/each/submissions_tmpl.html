@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ja">
 
+{{$top := .}}
+
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -55,6 +57,49 @@
             <div class="page-header">
                 <h1>提出一覧</h1>
             </div>
+
+            <ul class="nav nav-pills">
+	            <li role="presentation" {{if (ne .Uid .User)}}class="active"{{end}}><a href="/contests/{{.Cid}}/submissions/">全提出</a></li>
+	            <li role="presentation" {{if (eq .Uid .User)}}class="active"{{end}}><a href="/contests/{{.Cid}}/submissions/?user={{.Uid}}">自分</a></li>
+            </ul>
+            <div style="margin-top:5px;">
+                <form class="well form-inline" method="get" action="/contests/{{.Cid}}/submissions/">
+                    <div class="form-group">
+                		<label for="language_select">言語: </label>
+                		<select style="width: 140px;" name="prob" class="form-control input-sm" id="language_select">
+			                <option value="-1">-</option>
+                            {{range .Problems}}
+                            <option{{if (eq $top.Prob .Pidx)}} selected{{end}} value="{{.Pidx}}">{{.Pidx}} - {{html .Name}}</option>
+                            {{end}}
+                		</select>
+	                </div>
+                    <div class="form-group">
+                		<label for="language_select">言語: </label>
+                		<select style="width: 140px;" name="lang" class="form-control input-sm" id="language_select">
+			                <option value="-1">-</option>
+                            {{range .Languages}}
+                            <option{{if (eq $top.Lang .Lid)}} selected{{end}} value="{{.Lid}}">{{html .Name}}</option>
+                            {{end}}
+                		</select>
+	                </div>
+                    <div class="form-group">
+                		<label for="status_select">状態: </label>
+                		<select name="status" class="form-control input-sm" id="status_select">
+			                <option value="-1" selected>-</option>
+                            <option{{if (eq .Status 2)}} selected{{end}} value="2">AC</option>
+                            <option{{if (eq .Status 3)}} selected{{end}} value="3">WA</option>
+                            <option{{if (eq .Status 4)}} selected{{end}} value="4">TLE</option>
+                            <option{{if (eq .Status 5)}} selected{{end}} value="5">MLE</option>
+                            <option{{if (eq .Status 6)}} selected{{end}} value="6">RE</option>
+                            <option{{if (eq .Status 7)}} selected{{end}} value="7">CE</option>
+                            <option{{if (eq .Status 8)}} selected{{end}} value="8">IE</option>
+                		</select>
+	                </div>
+                    <input type="hidden" name="user" value="{{.User}}">
+                    <button type="submit" class="btn btn-default input-sm">検索</button>
+                </form>
+            </div>
+
             <div style="margin-top:5px;" class="panel panel-default">
                 <table class="table">
                     <thead>
@@ -67,7 +112,7 @@
                             <th>結果</th>
                             <th>時間</th>
                             <th>メモリ</th>
-                            <th></th>
+                            <th>-</th>
                         </tr>
                     </thead>
 
@@ -77,22 +122,15 @@
                             <td>{{timeToString .SubmitTime}}</td>
                             <td><a href="/contests/{{.Cid}}/problems/{{.Pidx}}">{{.Pidx}} - {{html .Name}}</a></td>
                             <td><a href="/contests/{{.Cid}}/submissions/?user={{html .Uid}}">{{html .UserName}}</a></td>
-                            <td>{{html .Lang}}<td>
+                            <td>{{html .Lang}}</td>
                             <td>{{if (ne .Score -1)}}{{.Score}}{{else}}-{{end}}</td>
                             <td>
                                 {{if (eq .Status "AC")}}
-                                    <span class="label label-success">AC</span>
-                                {{else}}
-                                    {{if (eq .Status "IE")}}
-                                        <span class="label label-danger">IE</span>
-                                    {{else}}
-                                        {{if (eq .Status "MLE" "TLE" "CE" "RE" "WA")}}
-                                            <span class="label label-warning">{{.Status}}</span>
-                                        {{else}}
-                                            <span class="label label-default">{{.Status}}</span>
-                                        {{end}}
-                                    {{end}}
-                                {{end}}
+                                <span class="label label-success">AC</span> {{else}}
+                                {{if (eq .Status "IE")}}<span class="label label-danger">IE</span> {{else}}
+                                    {{if (eq .Status "MLE" "TLE" "CE" "RE" "WA")}}<span class="label label-warning">{{.Status}}</span> {{else}}
+                                    <span class="label label-default">{{.Status}}</span> {{end}}
+                                {{end}}{{end}}
                             </td>
                             <td>{{if (ne .Time -1)}}{{.Time}}ms{{else}}-{{end}}</td>
                             <td>{{if (ne .Mem -1)}}{{.Mem}}KB{{else}}-{{end}}</td>
@@ -100,7 +138,7 @@
                         </tr>
                         {{else}}
                         <tr>
-                            <td>問題がありません。</td>
+                            <td>提出がありません。</td>
                         </tr>
                         {{end}}
                     </tbody>
@@ -108,27 +146,26 @@
             </div>
 
             <div style="text-align: center;">
-                <ul class="pagination" >
+                <ul class="pagination">
                     {{if ne .Current 1}}
-                        <li>
-                            <a href="./?lang={{.Lang}}&prob={{.Prob}}&status={{.Status}}&user={{html .User}}&p={{add .Current -1}}" aria-label="前のページへ">
-                                <span aria-hidden="true">«</span>
-                            </a>
-                        </li>
+                    <li>
+                        <a href="./?lang={{$top.Lang}}&prob={{$top.Prob}}&status={{$top.Status}}&user={{html $top.User}}&p={{add .Current -1}}" aria-label="前のページへ">
+                            <span aria-hidden="true">«</span>
+                        </a>
+                    </li>
                     {{end}}
-
-                    {{range $index, $page := .Pagenation}}
+                    {{range $page := .Pagination}}
                         {{if (eq $page.Page -1)}}
-                            <li class="disabled"><a href="./?lang={{.Lang}}&prob={{.Prob}}&status={{.Status}}&user={{html .User}}&p={{$page.Page}}">...</a></li>
+                            <li class="disabled"><a href="./?lang={{$top.Lang}}&prob={{$top.Prob}}&status={{$top.Status}}&user={{html $top.User}}&p={{$page.Page}}">...</a></li>
                         {{else}}
-                            <li {{if $page.IsActive}}class="active"{{end}}>
-                                <a href="./?lang={{.Lang}}&prob={{.Prob}}&status={{.Status}}&user={{html .User}}&p={{$page.Page}}">{{$page.Page}}</a>
+                            <li {{if $page.IsActive}}class="active" {{end}}>
+                                <a href="./?lang={{html $top.Lang}}&prob={{$top.Prob}}&status={{$top.Status}}&user={{html $top.User}}&p={{$page.Page}}">{{$page.Page}}</a>
                             </li>
                         {{end}}
                     {{end}}
                     {{if ne .Current .MaxPage}}
-                    <li>
-                        <a href="./?lang={{.Lang}}&prob={{.Prob}}&status={{.Status}}&user={{html .User}}&p={{add .Current 1}}" aria-label="次のページへ">
+                        <li>
+                            <a href="./?lang={{html $top.Lang}}&prob={{html $top.Prob}}&status={{html $top.Status}}&user={{html $top.User}}&p={{add .Current 1}}" aria-label="次のページへ">
                             <span aria-hidden="true">»</span>
                         </a>
                     </li>

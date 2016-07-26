@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 	"time"
-//	"fmt"
+	//"fmt"
 )
 
 func main() {
@@ -45,7 +45,11 @@ func main() {
 
 	fmt.Println(*prob)*/
 
-	mainDB.NewsAdd("その点トッポってすげぇよな、最後までチョコたっぷりだもん。")
+	//mainDB.NewsAdd("その点トッポってすげぇよな、最後までチョコたっぷりだもん。")
+	//fmt.Println(mainDB.LanguageAdd("C++14", ""))
+	/*for i := 0; i < 300; i++ {
+		mainDB.SubmissionNew(5, 1, 1, "Hello, world!")
+	}*/
 
 	/*pmainDB.UserAdd("tsuzu", "つづ", "hoge", "hoge@hoge.com", 0)
 	/*fmt.Println(pmainDB.ContestNew("Hoge", time.Date(2016, 7, 18, 0, 0, 0, 0, time.FixedZone("Asia/Tokyo", 9*60*60)).Unix(), time.Date(2016, 7, 19, 22, 0, 0, 0, time.FixedZone("Asia/Tokyo", 9*60*60)).Unix(), 1, ContestJOI))

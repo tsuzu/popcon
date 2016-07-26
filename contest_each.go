@@ -1,216 +1,335 @@
 package main
 
-import "net/http"
-import "html/template"
+import (
+	"html/template"
+	"net/http"
+	"time"
+)
+
 import "strconv"
-import "time"
+
+import "fmt"
 
 type ContestEachHandler struct {
-    Top *template.Template
-    ProbList *template.Template
-    ProbView *template.Template
+	Top      *template.Template
+	ProbList *template.Template
+	ProbView *template.Template
+    SubList  *template.Template
 }
 
 func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (http.HandlerFunc, error) {
-    cont, err := mainDB.ContestFind(cid)
+	cont, err := mainDB.ContestFind(cid)
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    check, err := mainDB.ContestParticipationCheck(std.Iid, cid)
+	check, err := mainDB.ContestParticipationCheck(std.Iid, cid)
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    free := check
-    if cont.FinishTime <= time.Now().Unix() {
-        free = true
-    }
+	free := check
+	if cont.FinishTime <= time.Now().Unix() {
+		free = true
+	}
 
-    mux := http.NewServeMux()
+	mux := http.NewServeMux()
 
-    mux.HandleFunc("/", func(rw http.ResponseWriter, req *http.Request){
-        if req.URL.Path != "/" {
-            rw.WriteHeader(http.StatusNotFound)
+	mux.HandleFunc("/", func(rw http.ResponseWriter, req *http.Request) {
+		if req.URL.Path != "/" {
+			rw.WriteHeader(http.StatusNotFound)
 
-            rw.Write([]byte(NF404))
+			rw.Write([]byte(NF404))
 
-            return
-        }
+			return
+		}
 
-        type TemplateVal struct {
-            UserName string
-            Cid int64
-            ContestName string
-            Description template.HTML
-            NotJoined bool
-        }
+		type TemplateVal struct {
+			UserName    string
+			Cid         int64
+			ContestName string
+			Description template.HTML
+			NotJoined   bool
+		}
 
-        desc, err := mainDB.ContestDescriptionLoad(cid)
+		desc, err := mainDB.ContestDescriptionLoad(cid)
 
-        if err != nil {
-            desc = ""
-        }
+		if err != nil {
+			desc = ""
+		}
 
-        templateVal := TemplateVal{
-            UserName: std.UserName,
-            Cid: cid,
-            ContestName: cont.Name,
-            Description: template.HTML(desc),
-            NotJoined: !free,
-        }
+		templateVal := TemplateVal{
+			UserName:    std.UserName,
+			Cid:         cid,
+			ContestName: cont.Name,
+			Description: template.HTML(desc),
+			NotJoined:   !free,
+		}
 
-        rw.WriteHeader(http.StatusOK)
-        ceh.Top.Execute(rw, templateVal)
-    })
+		rw.WriteHeader(http.StatusOK)
+		ceh.Top.Execute(rw, templateVal)
+	})
 
-    mux.HandleFunc("/problems/", func(rw http.ResponseWriter, req *http.Request) {
-        if !free {
-            RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/")
+	mux.HandleFunc("/problems/", func(rw http.ResponseWriter, req *http.Request) {
+		if !free {
+			RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/")
 
-            return
-        }
+			return
+		}
 
-        http.StripPrefix("/problems/", http.HandlerFunc(func(rw http.ResponseWriter, req*http.Request){
-            if req.URL.Path == "" {
-                probList, err := mainDB.ContestProblemList(cid)
+		http.StripPrefix("/problems/", http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			if req.URL.Path == "" {
+				probList, err := mainDB.ContestProblemList(cid)
 
-                if err != nil {
-                    probList = &[]ContestProblem{}
-                }
+				if err != nil {
+					probList = &[]ContestProblem{}
+				}
 
-                type TemplateVal struct {
-                    Problems []ContestProblem
-                    UserName string
-                    Cid int64
-                }
+				type TemplateVal struct {
+					Problems []ContestProblem
+					UserName string
+					Cid      int64
+				}
 
-                templateVal := TemplateVal{
-                    *probList,
-                    std.UserName,
-                    cid,
-                }
+				templateVal := TemplateVal{
+					*probList,
+					std.UserName,
+					cid,
+				}
 
-                rw.WriteHeader(http.StatusOK)
-                ceh.ProbList.Execute(rw, templateVal)
+				rw.WriteHeader(http.StatusOK)
+				ceh.ProbList.Execute(rw, templateVal)
 
-                return
+				return
+			}
+			pidx, err := strconv.ParseInt(req.URL.Path, 10, 64)
+
+			if err != nil {
+				rw.WriteHeader(http.StatusNotFound)
+
+				rw.Write([]byte(NF404))
+
+				return
+			}
+
+			prob, err := mainDB.ContestProblemFind2(cid, pidx)
+
+			if err != nil {
+				rw.WriteHeader(http.StatusNotFound)
+
+				rw.Write([]byte(NF404))
+
+				return
+			}
+
+			stat, err := prob.LoadStatement()
+
+			if err != nil {
+				rw.WriteHeader(http.StatusInternalServerError)
+				rw.Write([]byte(ISE500))
+
+				return
+			}
+
+			type TemplateVal struct {
+				ContestProblem
+				Cid      int64
+				Text     string
+				UserName string
+			}
+			templateVal := TemplateVal{*prob, cid, *stat, std.UserName}
+
+			rw.WriteHeader(http.StatusOK)
+
+			ceh.ProbView.Execute(rw, templateVal)
+		})).ServeHTTP(rw, req)
+	})
+
+	mux.Handle("/submissions/", http.StripPrefix("/submissions/", http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		if !free {
+			RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/")
+
+			return
+		}
+
+		if req.URL.Path == "" {
+			wrapForm := func(str string) int64 {
+				arr, has := req.Form[str]
+				if has && len(arr) != 0 {
+					val, err := strconv.ParseInt(arr[0], 10, 64)
+
+					if err != nil {
+						return -1
+					} else {
+						return val
+					}
+				}
+				return -1
+			}
+
+			wrapFormStr := func(str string) string {
+				arr, has := req.Form[str]
+				if has && len(arr) != 0 {
+					return arr[0]
+				}
+				return ""
+			}
+
+			stat := wrapForm("status")
+			lang := wrapForm("lang")
+			prob := wrapForm("prob")
+			page := int(wrapForm("p"))
+			userID := wrapFormStr("user")
+
+			const IllegalParam = -128
+			if page == -1 {
+				page = 1
+			}
+
+            var iid int64
+            if userID == "" {
+                iid = -1
+            }else {
+    			user, err := mainDB.UserFindFromUserID(userID)
+
+    			if err != nil {
+	    			iid = IllegalParam
+    			} else {
+				    iid = user.Iid
+			    }
             }
-            pidx, err := strconv.ParseInt(req.URL.Path, 10, 64)
+
+			count, err := mainDB.SubmissionViewCount(cid, iid, lang, prob, stat)
+
+			if err != nil {
+				fmt.Println(err) //TODO Fix
+
+				return
+			}
+
+			type TemplateVal struct {
+				UserName    string
+				Cid         int64
+                Uid         string
+				Submissions []SubmissionView
+                Problems    []ContestProblemLight
+                Languages   []Language
+				Current     int
+				MaxPage     int
+				Pagination  []PaginationHelper
+				Lang        int64
+				Prob        int64
+				Status      int64
+				User        string
+			}
+			var templateVal TemplateVal
+			templateVal.Cid = cid
+            templateVal.UserName = std.UserName
+			templateVal.User = userID
+			templateVal.Status = stat
+			templateVal.Lang = lang
+			templateVal.Prob = prob
+            templateVal.Uid = std.UserID
+
+            langs, err := mainDB.LanguageList()
 
             if err != nil {
-                rw.WriteHeader(http.StatusNotFound)
-
-                rw.Write([]byte(NF404))
-
-                return
+                fmt.Println(err)
+            }else {
+                templateVal.Languages = *langs
             }
 
-            prob, err := mainDB.ContestProblemFind2(cid, pidx)
+            probs, err := mainDB.ContestProblemListLight(cid)
 
             if err != nil {
-                rw.WriteHeader(http.StatusNotFound)
-
-                rw.Write([]byte(NF404))
-
-                return
+                fmt.Println(err)
+            }else {
+                templateVal.Problems = *probs
             }
 
-            stat, err := prob.LoadStatement()
+			templateVal.Current = 1
 
-            if err != nil {
-                rw.WriteHeader(http.StatusInternalServerError)
-                rw.Write([]byte(ISE500))
+			templateVal.MaxPage = int(count) / ContentsPerPage
 
-                return
-            }
+			if int(count)%ContentsPerPage != 0 {
+				templateVal.MaxPage++
+			} else if templateVal.MaxPage == 0 {
+				templateVal.MaxPage = 1
+			}
 
-            type TemplateVal struct {
-                ContestProblem
-                Cid int64
-                Text string
-                UserName string
-            }
-            templateVal := TemplateVal{*prob, cid, *stat, std.UserName}
+			if count > 0 {
+				if (page-1)*ContentsPerPage > int(count) {
+					page = 1
+				}
 
-            rw.WriteHeader(http.StatusOK)
+				templateVal.Current = page
 
-            ceh.ProbView.Execute(rw, templateVal)
-        })).ServeHTTP(rw, req)
-    })
+				submissions, err := mainDB.SubmissionViewList(cid, iid, lang, prob, stat, int64((page-1)*ContentsPerPage), ContentsPerPage)
 
-    mux.Handle("/submissions/", http.StripPrefix("/submissions/", http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-        if req.URL.Path == "" {
-            /*wrapForm := func(str string) int64 {
-                arr, has := req.Form["status"]
-                if has && len(arr) != 0 {
-                    val, err := strconv.ParseInt(arr[0], 10, 64)
+				if err == nil {
+					templateVal.Submissions = *submissions
+				} else {
+					fmt.Println(err)
+				}
+			}
 
-                    if err != nil {
-                        return -1
-                    }else {
-                        return val
-                    }
-                }
-                return -1
-            }
+            templateVal.Pagination = CreatePaginationHelper(templateVal.Current, templateVal.MaxPage, 3)
 
-            wrapFormStr := func(str string) string {
-                arr, has := req.Form["status"]
-                if has && len(arr) != 0 {
-                    return arr[0]
-                }
-                return ""
-            }*/
+            rw.WriteHeader(200)
 
-            /*stat := wrapForm("status")
-            lang := wrapForm("lang")
-            prob := wrapForm("prob")
-            page := wrapForm("p")
-            userID := wrapFormStr("user")
-            */
+            ceh.SubList.Execute(rw, templateVal)
+		}
+	})))
 
-        }
-    })))
+	mux.HandleFunc("/join", func(rw http.ResponseWriter, req *http.Request) {
+		if req.Method == "GET" {
+			mainDB.ContestParticipationAdd(std.Iid, cid)
 
-    mux.HandleFunc("/join", func(rw http.ResponseWriter, req *http.Request){
-        if req.Method == "GET" {
-            mainDB.ContestParticipationAdd(std.Iid, cid)
+			RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/")
+		} else {
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte(BR400))
+		}
+	})
 
-            RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/")
-        }else {
-            rw.WriteHeader(http.StatusBadRequest)
-            rw.Write([]byte(BR400))
-        }
-    })
+	handler := func(rw http.ResponseWriter, req *http.Request) {
+		mux.ServeHTTP(rw, req)
+	}
 
-    handler := func(rw http.ResponseWriter, req *http.Request) {
-        mux.ServeHTTP(rw, req)
-    }
-
-    return handler, nil
+	return handler, nil
 }
 
 func CreateContestEachHandler() (*ContestEachHandler, error) {
-    top, err := template.ParseFiles("./html/contests/each/index_tmpl.html")
+	top, err := template.ParseFiles("./html/contests/each/index_tmpl.html")
 
-    if err != nil {
-        return nil, err
+	if err != nil {
+		return nil, err
+	}
+
+	probList, err := template.ParseFiles("./html/contests/each/problems_tmpl.html")
+
+	if err != nil {
+		return nil, err
+	}
+
+	probView, err := template.ParseFiles("./html/contests/each/problem_view_tmpl.html")
+
+	if err != nil {
+		return nil, err
+	}
+
+    funcMap := template.FuncMap{
+        "timeToString": TimeToString,
+        "add" : func(x, y int) int {return x + y},
     }
 
-    probList, err := template.ParseFiles("./html/contests/each/problems_tmpl.html")
+    subList, err := template.New("").Funcs(funcMap).ParseFiles("./html/contests/each/submissions_tmpl.html")
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    probView, err := template.ParseFiles("./html/contests/each/problem_view_tmpl.html")
-
-    if err != nil {
-        return nil, err
-    }
-
-    return &ContestEachHandler{top, probList, probView}, nil
+	return &ContestEachHandler{top, probList, probView, subList.Lookup("submissions_tmpl.html")}, nil
 }

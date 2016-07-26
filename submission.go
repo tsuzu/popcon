@@ -26,9 +26,9 @@ const (
 	WrongAnswer         SubmissionStatus = 3
 	TimeLimitExceeded   SubmissionStatus = 4
 	MemoryLimitExceeded SubmissionStatus = 5
-	RuntimeError        SubmissionStatus = 7
-	CompileError        SubmissionStatus = 8
-	InternalError       SubmissionStatus = 9
+	RuntimeError        SubmissionStatus = 6
+	CompileError        SubmissionStatus = 7
+	InternalError       SubmissionStatus = 8
 )
 
 var SubmissionStatusToString = map[SubmissionStatus]string{
@@ -46,7 +46,6 @@ var SubmissionStatusToString = map[SubmissionStatus]string{
 type Submission struct {
 	Sid        int64  `db:"pk" default:""`
 	Pid        int64  `default:""` //index
-	Cid        int64  `default:""` //index, onlinejudge->0
 	Iid        int64  `default:""` //index
 	Lang       int64  `default:""`
 	Time       int64  `default:""` //ms
@@ -65,17 +64,15 @@ func (dm *DatabaseManager) CreateSubmissionTable() error {
 	}
 
 	dm.db.CreateIndex(&Submission{}, "pid")
-	dm.db.CreateIndex(&Submission{}, "cid")
 	dm.db.CreateIndex(&Submission{}, "iid")
 	dm.db.CreateIndex(&Submission{}, "status")
 
 	return nil
 }
 
-func (dm *DatabaseManager) SubmissionNew(pid, cid, iid, lang int64, code string) (int64, error) {
+func (dm *DatabaseManager) SubmissionNew(pid, iid, lang int64, code string) (int64, error) {
 	sm := Submission{
 		Pid:        pid,
-		Cid:        cid,
 		Iid:        iid,
 		Lang:       lang,
 		Time:       0,
@@ -260,6 +257,11 @@ func (dm *DatabaseManager) SubmissionGetCase(sid int64) (*map[int64]SubmissionSt
 	}
 
 	var ss map[int64]SubmissionStatus
+
+    if len(b) == 0 {
+        return &ss, nil
+    }
+
 	err = json.Unmarshal(b, &ss)
 
 	if err != nil {
@@ -270,7 +272,7 @@ func (dm *DatabaseManager) SubmissionGetCase(sid int64) (*map[int64]SubmissionSt
 }
 
 func (dm *DatabaseManager) SubmissionSetCase(sid int64, ss map[int64]SubmissionStatus) error {
-	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/case", os.O_RDONLY, false)
+	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/case", os.O_WRONLY, true)
 
 	if err != nil {
 		return err
@@ -293,7 +295,7 @@ type SubmissionView struct {
 	SubmitTime int64
 	Cid int64
 	Pidx int64
-	Name int64
+	Name string
 	Uid string
 	UserName string
 	Lang string
@@ -304,32 +306,28 @@ type SubmissionView struct {
 	Sid int64
 }
 
-func (dm *DatabaseManager) SubmissionCount(cid, iid, lid, pidx, stat, offset, limit int64) (*[]SubmissionView, error) {
-	placeholders := make([]interface{}, 0, 5)
+func (dm *DatabaseManager) submissionViewQueryCreate(query string, cid, iid, lid, pidx, stat int64, order string, offset, limit int64) (*string, error) {
 	conditions := make([]string, 0, 5)
 
-	query := "select submission.submit_time, submission.cid, contest_problem.pidx, contest_problem.name, user.uid, user.user_name, language.name, submission.score, submission.status, submission.prog, submission.time, submission.mem, submission.sid from submission inner join contest_problem on submission.pid = contest_problem.pid inner join user on submission.iid = user.iid inner join language on submission.lang = language.lid "
-
 	if cid != -1 {
-		conditions = append(conditions, "submission.cid = ? ")
-		placeholders = append(placeholders, cid)
+		conditions = append(conditions, "contest_problem.cid = " + strconv.FormatInt(cid, 10) + " ")
 	}
 
 	if iid != -1 {
-		conditions = append(conditions, "user.iid = ? ")
-		placeholders = append(placeholders, iid)
+		conditions = append(conditions, "user.iid = " + strconv.FormatInt(iid, 10) + " ")
 	}
 
 	if pidx != -1 {
-		conditions = append(conditions, "contest_problem.pidx = ? ")
-		placeholders = append(placeholders, pidx)
+        if cid == -1 {
+            return nil, errors.New("You must set cid to set pidx")
+        }
+
+		conditions = append(conditions, "contest_problem.pidx = " + strconv.FormatInt(pidx, 10) + " ")
 	}
 
 	if stat != -1 {
-		conditions = append(conditions, "submission.status = ? ")
-		placeholders = append(placeholders, stat)
+		conditions = append(conditions, "submission.status = " + strconv.FormatInt(stat, 10) + " ")
 	}
-
 
 	where := strings.Join(conditions, "and ")
 
@@ -337,7 +335,60 @@ func (dm *DatabaseManager) SubmissionCount(cid, iid, lid, pidx, stat, offset, li
 		where = "where " + where
 	}
 
-	rows, err := dm.db.DB().Query(query + where, placeholders...)
+    var lim string
+    if offset != -1 {
+        lim = "limit " + strconv.FormatInt(offset, 10)
+        if limit != -1 {
+            lim = lim + ", " + strconv.FormatInt(limit, 10)
+        }
+    }else {
+        if limit != -1 {
+            lim = "limit " + strconv.FormatInt(limit, 10)
+        }
+    }
+
+    query += where + order + lim
+
+    return &query, nil
+}
+
+func (dm *DatabaseManager) SubmissionViewCount(cid, iid, lid, pidx, stat int64) (int64, error) {
+    queryBase := "select count(submission.sid) from submission inner join contest_problem on submission.pid = contest_problem.pid inner join user on submission.iid = user.iid inner join language on submission.lang = language.lid "
+
+    query, err := dm.submissionViewQueryCreate(queryBase, cid, iid, lid, pidx, stat, "", -1, -1)
+
+    if err != nil {
+        return 0, err
+    }
+
+    rows, err := dm.db.DB().Query(*query)
+
+    if err != nil {
+        return 0, err
+    }
+
+    rows.Next()
+
+    var cnt int64
+    err = rows.Scan(&cnt)
+
+    if err != nil {
+        return 0, err
+    }
+
+    return cnt, err
+}
+
+func (dm *DatabaseManager) SubmissionViewList(cid, iid, lid, pidx, stat, offset, limit int64) (*[]SubmissionView, error) {
+	queryBase := "select submission.submit_time, contest_problem.cid, contest_problem.pidx, contest_problem.name, user.uid, user.user_name, language.name, submission.score, submission.status, submission.prog, submission.time, submission.mem, submission.sid from submission inner join contest_problem on submission.pid = contest_problem.pid inner join user on submission.iid = user.iid inner join language on submission.lang = language.lid "
+
+	query, err := dm.submissionViewQueryCreate(queryBase, cid, iid, lid, pidx, stat, "order by submission.sid desc ", offset, limit)
+    
+    if err != nil {
+        return nil, err
+    }
+
+    rows, err := dm.db.DB().Query(*query)
 	
 	if err != nil {
 		return nil, err
@@ -351,14 +402,25 @@ func (dm *DatabaseManager) SubmissionCount(cid, iid, lid, pidx, stat, offset, li
 		var sv SubmissionView
 
 		var status int64
-		var prog string
+		var prog uint64
 		rows.Scan(&sv.SubmitTime, &sv.Cid, &sv.Pidx, &sv.Name, &sv.Uid, &sv.UserName, &sv.Lang, &sv.Score, &status, &prog, &sv.Time, &sv.Mem, &sv.Sid)
 
-		if status == 1 {
-			sv.Status = prog
+		if status == int64(Judging) {
+            all := prog & ((uint64(1) << 32) - 1)
+            per := prog >> 32
+
+			sv.Status = strconv.FormatInt(int64(per), 10) + "/" + strconv.FormatInt(int64(all), 10)
 		}else {
 			sv.Status = SubmissionStatusToString[SubmissionStatus(status)]
 		}
+
+        if status != int64(Accepted) && status != int64(WrongAnswer) {
+            sv.Mem = -1
+            sv.Time = -1
+            sv.Score = -1
+        }
+
+        views = append(views, sv)
 	}
 
 	return &views, nil

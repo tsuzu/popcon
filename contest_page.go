@@ -10,9 +10,10 @@ import "errors"
 import "net/url"
 import "strings"
 
+const ContentsPerPage = 50
+
 type ContestsTopHandler struct {
     Temp *template.Template
-    NumPerPage int
     EachHandler *ContestEachHandler
 }
 
@@ -43,7 +44,7 @@ func CreateContestsTopHandler() (*ContestsTopHandler, error) {
         return nil, err
     }
 
-    return &ContestsTopHandler{temp, 50, ceh}, nil
+    return &ContestsTopHandler{temp, ceh}, nil
 }
 
 func TimeRangeToString(start, finish int64) string {
@@ -146,7 +147,7 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 
     if err != nil {
         //TODO 
-        fmt.Println(err)
+        fmt.Println(err) //logに変更
         return
     }
 
@@ -163,22 +164,22 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
     templateVal.Type = reqType
     templateVal.Current = 1
 
-    templateVal.MaxPage = int(count) / ch.NumPerPage
+    templateVal.MaxPage = int(count) / ContentsPerPage
 
-    if int(count) % ch.NumPerPage != 0 {
+    if int(count) % ContentsPerPage != 0 {
         templateVal.MaxPage++
     }else if templateVal.MaxPage == 0 {
         templateVal.MaxPage = 1
     }
 
     if count > 0 {
-        if (page - 1) * ch.NumPerPage > int(count) {
+        if (page - 1) * ContentsPerPage > int(count) {
             page = 1
         }
 
         templateVal.Current = page
 
-        contests, err := mainDB.ContestList(cond, mainDB.db.OrderBy("start_time", genmai.ASC).Offset(int((page - 1) * ch.NumPerPage)).Limit(ch.NumPerPage))
+        contests, err := mainDB.ContestList(cond, mainDB.db.OrderBy("start_time", genmai.ASC).Offset(int((page - 1) * ContentsPerPage)).Limit(ContentsPerPage))
 
         if err == nil {
             templateVal.Contests = *contests
