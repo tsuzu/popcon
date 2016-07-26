@@ -62,6 +62,7 @@
                             <th>提出日時</th>
                             <th>問題名</th>
                             <th>ユーザ名</th>
+                            <th>言語</th>
                             <th>スコア</th>
                             <th>結果</th>
                             <th>時間</th>
@@ -73,9 +74,10 @@
                     <tbody>
                         {{range .Submissions}}
                         <tr>
-                            <td>{{timeToString .Time}}</td>
+                            <td>{{timeToString .SubmitTime}}</td>
                             <td><a href="/contests/{{.Cid}}/problems/{{.Pidx}}">{{.Pidx}} - {{html .Name}}</a></td>
-                            <td><a href="/contests/{{.Cid}}/submissions/?user={{.Iid}}">{{html .UserName}}</a></td>
+                            <td><a href="/contests/{{.Cid}}/submissions/?user={{html .Uid}}">{{html .UserName}}</a></td>
+                            <td>{{html .Lang}}<td>
                             <td>{{if (ne .Score -1)}}{{.Score}}{{else}}-{{end}}</td>
                             <td>
                                 {{if (eq .Status "AC")}}
@@ -87,13 +89,13 @@
                                         {{if (eq .Status "MLE" "TLE" "CE" "RE" "WA")}}
                                             <span class="label label-warning">{{.Status}}</span>
                                         {{else}}
-                                            <span class="label label-default">.Status</span>
+                                            <span class="label label-default">{{.Status}}</span>
                                         {{end}}
                                     {{end}}
                                 {{end}}
                             </td>
-                            <td>{{if (ne .Score -1)}}{{.Time}}ms{{else}}-{{end}}</td>
-                            <td>{{if (ne .Score -1)}}{{.Mem}}KB{{else}}-{{end}}</td>
+                            <td>{{if (ne .Time -1)}}{{.Time}}ms{{else}}-{{end}}</td>
+                            <td>{{if (ne .Mem -1)}}{{.Mem}}KB{{else}}-{{end}}</td>
                             <td><a href="/contests/{{.Cid}}/submissions/{{.Sid}}">詳細</a></td>
                         </tr>
                         {{else}}
