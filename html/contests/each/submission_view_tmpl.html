@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+{{$top := .}}
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>popcon</title>
+    <!--Bootstrap CSS-->
+    <link href="/static/css/bootstrap.min.1.css" rel="stylesheet">
+    <!--jQuery-->
+    <script src="/static/js/jquery-1.12.2.min.js"></script>
+    <!--Bootstrap JS-->
+    <script src="/static/js/bootstrap.min.js"></script>
+    <!--footerFixed JS-->
+    <script src="/static/js/footer-fixed.js"></script>
+    <!--highlight.js-->
+    <link rel="stylesheet" href="/static/css/highlightjs/github.css">
+    <script src="/static/js/highlight.pack.js"></script>
+    <style>
+        #footer {
+            text-align: center;
+            padding-bottom: 15px;
+        }
+    </style>
+    <script>hljs.initHighlightingOnLoad();</script>
+<!--    <script>
+        // [.highlightjs]で囲まれた中だけをハイライトする
+        var elms = document.getElementsByClassName( 'highlightjs' ) ;
+
+        for( var i=0 , l=elms.length ; l>i ; i++ ) {
+        	// Highlight.jsの起動
+    	    hljs.highlightBlock( elms[i] ) ;
+        }
+    </script>-->
+</head>
+
+<body>
+    <header>
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbarEexample">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="/">popcon</a>
+                </div>
+
+                <div class="collapse navbar-collapse" id="navbarEexample">
+                    <ul class="nav navbar-nav">
+                        <li><a href="/contests/{{.Cid}}/">コンテストトップ</a></li>
+                        <li><a href="/contests/{{.Cid}}/problems/">問題一覧</a></li>
+                        <li class="active"><a href="/contests/{{.Cid}}/submissions/">提出一覧</a></li>
+                        <li><a href="/contests/{{.Cid}}/ranking">ランキング</a></li>
+                        <p class="navbar-text"><a href="/contests/">コンテスト一覧へ</a></p>
+                    </ul>
+                    <div class="navbar-right">
+                        <p class="navbar-text">User: <a href="/userinfo">{{html .UserName}}</a></p>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="contents">
+        <div class="container">
+            <div class="page-header">
+                <h1>Submission #{{.Submission.Sid}}</h1>
+            </div>
+
+            <div style="margin-top:5px;">
+                <h3>ソースコード</h3>
+                <pre><code {{if (ne .Submission.HighlightType "")}}class="{{.Submission.HighlightType}}"{{end}}>{{html .Code}}</code></pre>
+            </div>
+
+            <div>
+                <h3>情報</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr>
+                            <td>問題名</td>
+                            <td><a href="/contests/{{.Submission.Cid}}/problems/{{.Submission.Pidx}}">{{.Submission.Pidx}} - {{html .Submission.Name}}</a></td>
+                        </tr>
+                        <tr>
+                            <td>ユーザ名</td>    
+                            <td><a href="/contests/{{.Submission.Cid}}/submissions/?user={{html .Submission.Uid}}">{{html .Submission.Uid}}</a></td>
+                        <tr>
+                            <td>提出日時</td>
+                            <td>{{timeToString .Submission.SubmitTime}}</td>
+                        </tr>
+                        <tr>
+                            <td>言語</td>
+                            <td>{{html .Submission.Lang}}</td>
+                        </tr>
+                        <tr>
+                            <td>状態</td>
+                            <td>
+                                {{if (eq .Submission.Status "AC")}}
+                                    <span class="label label-success">AC</span> 
+                                {{else}}
+                                    {{if (eq .Submission.Status "IE")}}
+                                        <span class="label label-danger">IE</span>
+                                    {{else}}
+                                        {{if (eq .Submission.Status "MLE" "TLE" "CE" "RE" "WA")}}
+                                            <span class="label label-warning">{{.Submission.Status}}</span>
+                                        {{else}}
+                                  	        <span class="label label-default">{{.Submission.Status}}</span>
+                                        {{end}}
+                                    {{end}}
+                                {{end}}
+                            </td>    
+                        </tr>
+                        <tr>
+                            <td>スコア</td>
+                            <td>{{if (ne .Submission.Score -1)}}{{.Submission.Score}}{{else}}-{{end}}</td>
+                        </tr>
+                        <tr>
+                            <td>ソースコード長</td>
+                            <td>{{len .Code}}</td>
+                        </tr>
+                        <tr>
+                            <td>実行時間</td>
+                            <td>{{if (ne .Submission.Time -1)}}{{.Submission.Time}}ms{{else}}-{{end}}</td>
+                        </tr>
+                        <tr>
+                            <td>メモリ使用量</td>
+                            <td>{{if (ne .Submission.Mem -1)}}{{.Submission.Mem}}KB{{else}}-{{end}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            {{with .Msg}}
+            <div class="panel panel-default">
+	            <div class="panel-heading">
+            		メッセージ
+            	</div>
+            	<div class="panel-body"><pre>{{html .}}</pre></div>
+            </div>
+            {{end}}
+
+            {{with .Cases}}
+            <div class="panel panel-default">
+                <h3>情報</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ケース名</th>
+                            <th>状態</th>
+                            <th>時間</th>
+                            <th>メモリ</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {{range .}}
+                            <tr>
+                                <td>{{html .Name}}</td>
+                                <td>
+                                    {{if (eq .Status "AC")}}
+                                        <span class="label label-success">AC</span> 
+                                    {{else}}
+                                        {{if (eq .Status "IE")}}
+                                            <span class="label label-danger">IE</span>
+                                        {{else}}
+                                            {{if (eq .Status "MLE" "TLE" "CE" "RE" "WA")}}
+                                                <span class="label label-warning">{{.Status}}</span>
+                                            {{else}}
+                                      	        <span class="label label-default">{{.Status}}</span>
+                                            {{end}}
+                                        {{end}}
+                                    {{end}}    
+                                </td>
+                                <td>{{.Time}}ms</td>
+                                <td>{{.Mem}}KB</td>
+                            </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+            {{end}}
+        </div>
+        <div style="margin-top:10px;" class="container">
+            <footer class="container-fluid" id="footer">
+                <small>© 2016 Tsuzu</small>
+            </footer>
+        </div>
+    </div>
+</body>
+
+</html>

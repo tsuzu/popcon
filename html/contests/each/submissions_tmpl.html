@@ -59,13 +59,14 @@
             </div>
 
             <ul class="nav nav-pills">
-	            <li role="presentation" {{if (ne .Uid .User)}}class="active"{{end}}><a href="/contests/{{.Cid}}/submissions/">全提出</a></li>
-	            <li role="presentation" {{if (eq .Uid .User)}}class="active"{{end}}><a href="/contests/{{.Cid}}/submissions/?user={{.Uid}}">自分</a></li>
+	            <li role="presentation" {{if (eq .User "")}}class="active"{{end}}><a href="/contests/{{.Cid}}/submissions/">全提出</a></li>
+	            <li role="presentation" {{if (eq .User .Uid)}}class="active"{{end}}><a href="/contests/{{.Cid}}/submissions/?user={{.Uid}}">自分</a></li>
+                {{if (eq (eq .User "" .Uid) false)}}<li role="presentation" class="active"><a href="/contests/{{.Cid}}/submissions/?user={{html .User}}">他<span class="badge">{{html .User}}</span></a></li>{{end}}
             </ul>
             <div style="margin-top:5px;">
                 <form class="well form-inline" method="get" action="/contests/{{.Cid}}/submissions/">
                     <div class="form-group">
-                		<label for="language_select">言語: </label>
+                		<label for="language_select">問題: </label>
                 		<select style="width: 140px;" name="prob" class="form-control input-sm" id="language_select">
 			                <option value="-1">-</option>
                             {{range .Problems}}

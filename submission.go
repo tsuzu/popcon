@@ -209,11 +209,12 @@ func (dm *DatabaseManager) SubmissionGetCode(sid int64) (*string, error) {
 	return &str, nil
 }
 
-func (dm *DatabaseManager) SubmissionGetMsg(sid int64) string {
+func (dm *DatabaseManager) SubmissionGetMsg(sid int64) *string {
+	var res string
 	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/msg", os.O_RDONLY, false)
 
 	if err != nil {
-		return ""
+		return &res
 	}
 
 	defer fm.Close()
@@ -221,10 +222,12 @@ func (dm *DatabaseManager) SubmissionGetMsg(sid int64) string {
 	b, err := ioutil.ReadAll(fm)
 
 	if err != nil {
-		return ""
+		return &res
 	}
 
-	return string(b)
+	res = string(b)
+
+	return &res
 }
 
 func (dm *DatabaseManager) SubmissionSetMsg(sid int64, msg string) error {
@@ -241,7 +244,14 @@ func (dm *DatabaseManager) SubmissionSetMsg(sid int64, msg string) error {
 	return err
 }
 
-func (dm *DatabaseManager) SubmissionGetCase(sid int64) (*map[int64]SubmissionStatus, error) {
+type SubmissionTestCase struct {
+	Status SubmissionStatus
+	Name string
+	Time int64
+	Mem int64
+}
+
+func (dm *DatabaseManager) SubmissionGetCase(sid int64) (*map[int]SubmissionTestCase, error) {
 	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/case", os.O_RDONLY, false)
 
 	if err != nil {
@@ -256,7 +266,7 @@ func (dm *DatabaseManager) SubmissionGetCase(sid int64) (*map[int64]SubmissionSt
 		return nil, err
 	}
 
-	var ss map[int64]SubmissionStatus
+	var ss map[int]SubmissionTestCase
 
     if len(b) == 0 {
         return &ss, nil
@@ -271,7 +281,7 @@ func (dm *DatabaseManager) SubmissionGetCase(sid int64) (*map[int64]SubmissionSt
 	return &ss, nil
 }
 
-func (dm *DatabaseManager) SubmissionSetCase(sid int64, ss map[int64]SubmissionStatus) error {
+func (dm *DatabaseManager) SubmissionSetCase(sid int64, ss map[int64]SubmissionTestCase) error {
 	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/case", os.O_WRONLY, true)
 
 	if err != nil {
@@ -425,3 +435,50 @@ func (dm *DatabaseManager) SubmissionViewList(cid, iid, lid, pidx, stat, offset,
 
 	return &views, nil
 }
+
+type SubmissionViewEach struct {
+	SubmissionView
+	HighlightType string
+}
+
+func (dm *DatabaseManager) SubmissionViewFind(sid int64) (*SubmissionViewEach, error) {
+	query := "select submission.submit_time, contest_problem.cid, contest_problem.pidx, contest_problem.name, user.uid, user.user_name, language.name, submission.score, submission.status, submission.prog, submission.time, submission.mem, submission.sid, language.highlight_type from submission inner join contest_problem on submission.pid = contest_problem.pid inner join user on submission.iid = user.iid inner join language on submission.lang = language.lid where submission.sid = " + strconv.FormatInt(sid, 10)
+
+    rows, err := dm.db.DB().Query(query)
+	
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	rows.Next()
+	
+	var sv SubmissionViewEach
+	var status int64
+	var prog uint64
+	
+	err = rows.Scan(&sv.SubmitTime, &sv.Cid, &sv.Pidx, &sv.Name, &sv.Uid, &sv.UserName, &sv.Lang, &sv.Score, &status, &prog, &sv.Time, &sv.Mem, &sv.Sid, &sv.HighlightType)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if status == int64(Judging) {
+    	all := prog & ((uint64(1) << 32) - 1)
+        per := prog >> 32
+
+		sv.Status = strconv.FormatInt(int64(per), 10) + "/" + strconv.FormatInt(int64(all), 10)
+	}else {
+		sv.Status = SubmissionStatusToString[SubmissionStatus(status)]
+	}
+
+    if status != int64(Accepted) && status != int64(WrongAnswer) {
+        sv.Mem = -1
+        sv.Time = -1
+        sv.Score = -1
+    }
+
+	return &sv, nil
+}
+

@@ -15,6 +15,8 @@ type ContestEachHandler struct {
 	ProbList *template.Template
 	ProbView *template.Template
     SubList  *template.Template
+	SubView  *template.Template
+	Submit   *template.Template
 }
 
 func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (http.HandlerFunc, error) {
@@ -280,6 +282,76 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
             rw.WriteHeader(200)
 
             ceh.SubList.Execute(rw, templateVal)
+		}else {
+			sid, err := strconv.ParseInt(req.URL.Path, 10, 64)
+
+			if err != nil {
+				rw.WriteHeader(http.StatusNotFound)
+				rw.Write([]byte(NF404))
+
+				return
+			}
+
+			submission, err := mainDB.SubmissionViewFind(sid)
+
+			if err != nil {
+				fmt.Println(err) // TODO: Fix
+
+				rw.WriteHeader(http.StatusNotFound)
+				rw.Write([]byte(NF404))
+
+				return
+			}
+
+			code, err := mainDB.SubmissionGetCode(sid)
+
+			if err != nil {
+				var tmp string 
+
+				code = &tmp
+			}
+
+			casesMap, err := mainDB.SubmissionGetCase(sid)
+			var cases []SubmissionTestCase
+
+			if err == nil  {
+				cases = make([]SubmissionTestCase, len(*casesMap))
+				idx := 0
+				for _, v := range *casesMap {
+					cases[idx] = v
+
+					idx++
+				}
+			}else {
+				fmt.Println(err) // TODO: Fix
+			}
+
+			msg := mainDB.SubmissionGetMsg(sid)
+
+			if msg != nil && len(*msg) == 0 {
+				msg = nil
+			}
+
+			type TemplateVal struct {
+				Submission SubmissionViewEach
+				Cases []SubmissionTestCase
+				Code string
+				Msg *string
+				UserName string
+				Cid int64
+			}
+
+			templateVal := TemplateVal {
+				Submission: *submission,
+				Cases: cases,
+				Code: *code,
+				Msg: msg,
+				UserName: std.UserName,
+				Cid: cid,
+			}
+
+			rw.WriteHeader(http.StatusOK)
+			ceh.SubView.Execute(rw, templateVal)
 		}
 	})))
 
@@ -288,6 +360,60 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			mainDB.ContestParticipationAdd(std.Iid, cid)
 
 			RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/")
+		} else {
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte(BR400))
+		}
+	})
+
+	mux.HandleFunc("/submit", func(rw http.ResponseWriter, req *http.Request) {
+		if req.Method == "GET" {
+			type TemplateVal struct {
+				UserName string
+				Cid int64
+				Problems []ContestProblemLight
+				Languages []Language
+				Prob int64
+			}
+
+			list, err := mainDB.ContestProblemListLight(cid)
+
+			if err != nil {
+				list = &[]ContestProblemLight{}
+
+				fmt.Println(err) // TODO: Fix
+			}
+
+			lang, err := mainDB.LanguageList()
+
+			if err != nil {
+				lang = &[]Language{}
+
+				fmt.Println(err)
+			}
+
+			probArr, has := req.Form["prob"]
+			var prob int64 = -1
+
+			if has && len(probArr) != 0 {
+				p, err := strconv.ParseInt(probArr[0], 10, 64)
+
+				if err != nil {
+					prob = -1
+				}
+				prob = p
+			}
+
+			templateVal := TemplateVal {
+				std.UserName,
+				cid,
+				*list,
+				*lang,
+				prob,
+			}
+
+			rw.WriteHeader(http.StatusOK)
+			ceh.Submit.Execute(rw, templateVal)
 		} else {
 			rw.WriteHeader(http.StatusBadRequest)
 			rw.Write([]byte(BR400))
@@ -331,5 +457,17 @@ func CreateContestEachHandler() (*ContestEachHandler, error) {
 		return nil, err
 	}
 
-	return &ContestEachHandler{top, probList, probView, subList.Lookup("submissions_tmpl.html")}, nil
+	subView, err := template.New("").Funcs(funcMap).ParseFiles("./html/contests/each/submission_view_tmpl.html")
+
+	if err != nil {
+		return nil, err
+	}
+
+	submit, err := template.ParseFiles("./html/contests/each/submit_tmpl.html")
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ContestEachHandler{top, probList, probView, subList.Lookup("submissions_tmpl.html"), subView.Lookup("submission_view_tmpl.html"), submit}, nil
 }

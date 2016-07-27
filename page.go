@@ -202,7 +202,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 					return
 				}
 
-				if backurl[0][0] != '/' {
+				if backurl[0][:2] == "//" {
 					rw.WriteHeader(http.StatusBadRequest)
 					fmt.Fprint(rw, BR400)
 
@@ -235,7 +235,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 					http.SetCookie(rw, &cookie)
 					
-					backurl[0] = "http://azure2.wt6.pw:10065" + backurl[0] // TODO: Load from setting file
+					backurl[0] = /*"http://azure2.wt6.pw:10065" + */backurl[0] // TODO: Load from setting file
 
 					RespondRedirection(rw, backurl[0])
 				}
