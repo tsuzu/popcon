@@ -82,6 +82,35 @@ func (dm *DatabaseManager) ContestNew(name string, start int64, finish int64, ad
     return cont.Cid, nil
 }
 
+func (dm *DatabaseManager) ContestUpdate(cid int64, name string, start int64, finish int64, admin int64, ctype ContestType) error {
+    cont := Contest{
+        Cid: cid,
+        Name: name,
+        StartTime: start,
+        FinishTime: finish,
+        Admin: admin,
+        Type: int64(ctype),
+    }
+
+    _, err := dm.db.Update(&cont)
+
+    if err != nil {
+        return err
+    }
+
+    fm, err := FileManager.OpenFile(ContestDir + strconv.FormatInt(cont.Cid, 10), os.O_CREATE | os.O_WRONLY, true)
+
+    if err != nil {
+        dm.ContestDelete(cont.Cid)
+
+        return err
+    }
+
+    fm.Close()
+
+    return nil
+}
+
 func (dm *DatabaseManager) ContestDelete(cid int64) error {
     _, err := dm.db.Delete(&Contest{Cid: cid})
 

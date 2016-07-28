@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>popcon</title>
+    <title>{{html .ContestName}} Submit| popcon</title>
     <!--Bootstrap CSS-->
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
     <!--jQuery-->
@@ -58,14 +58,16 @@
                         <h1>提出</h1>
                     </div>
                 </div>
+            </div>
+            <div>
                 <form class="form-horizontal" method="post" action="/contests/{{.Cid}}/submit">
                     <fieldset>
                         <div class="row">
                             <div class="col-xs-12 col-md-4 col-md-offset-2">
                                 <div class="control-group">
-                                    <label class="control-label" for="prob">問題: </label>
+                                    <label class="control-label" for="problem_select">問題: </label>
                                     <div class="controls">
-                                        <select name="prob" class="form-control input-sm" id="language_select">
+                                        <select name="prob" class="form-control input-sm" id="problem_select">
 		                                    <option value="-1">-</option>
                                             {{$top := .}}
                                             {{range .Problems}}
@@ -75,7 +77,7 @@
                                     </div>
                                 </div>
                                 <div class="control-group">
-                                    <label class="control-label" for="lang">言語: </label>
+                                    <label class="control-label" for="language_select">言語: </label>
                                     <div class="controls">
                                         <select name="lang" class="form-control input-sm" id="language_select">
 		                                    <option value="-1">-</option>
@@ -90,9 +92,9 @@
                         <div class="row">
                             <div class="col-xs-12 col-md-5 col-md-offset-2">
                                 <div class="control-group">
-                                    <label class="control-label" for="code">ソースコード: </label>
+                                    <label class="control-label" for="code_textarea">ソースコード: </label>
                                     <div class="controls">
-                                        <textarea name="code" class="form-control input-xlarge" rows="15"></textarea>
+                                        <textarea id="code_textarea" name="code" class="form-control input-xlarge" rows="15"></textarea>
                                     </div>
                                 </div>
 
@@ -103,15 +105,14 @@
                         </div>
                     </fieldset>
                 </form>
-            		</div>
-                    <div class="col-xs-12 col-md-6"></div>
-            </div>
-            <div style="margin-top:10px;" class="container">
-                <footer class="container-fluid" id="footer">
-                    <small>© 2016 Tsuzu</small>
-                </footer>
             </div>
         </div>
+        <div style="margin-top:10px;" class="container">
+            <footer class="container-fluid" id="footer">
+                <small>© 2016 Tsuzu</small>
+            </footer>
+        </div>
+    </div>
 </body>
 
 </html>

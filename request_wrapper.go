@@ -11,7 +11,7 @@ func ParseRequestForSession(req *http.Request) (*SessionTemplateData, error) {
 	session := ParseSession(req)
 
 	if session == nil {
-		return nil, nil
+		return nil, errors.New("Session Not Found")
 	}
 
 	return GetSessionTemplateData(*session)

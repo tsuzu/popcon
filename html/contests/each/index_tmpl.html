@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>popcon</title>
+    <title>{{html .ContestName}} トップ| popcon</title>
     <!--Bootstrap CSS-->
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
     <!--jQuery-->
@@ -38,7 +38,7 @@
                 <div class="collapse navbar-collapse" id="navbarEexample">
                     <ul class="nav navbar-nav">
                         <li class="active"><a href="/contests/{{.Cid}}/">コンテストトップ</a></li>
-                        {{if (ne .NotJoined true)}}
+                        {{if .Enabled}}
                         <li><a href="/contests/{{.Cid}}/problems/">問題一覧</a></li>
                         <li><a href="/contests/{{.Cid}}/submissions/">提出一覧</a></li>
                         <li><a href="/contests/{{.Cid}}/ranking">ランキング</a></li>
@@ -55,7 +55,11 @@
     <div class="contents">
         <div class="container">
             <div class="page-header">
-                <h1>{{html .ContestName}}{{if .NotJoined}} <small><button type="submit" class="btn btn-primary" onclick="location.href='/contests/{{.Cid}}/join'">Join this contest</button></small>{{end}}</h1>
+                <h1>
+                    {{html .ContestName}}&nbsp;&nbsp;&nbsp;<small>{{timeRangeToString .StartTime .FinishTime}}</small>
+                    {{if .JoinButtonActive}}<div class="pull-right"><button type="button" class="btn btn-primary" onclick="location.href='/contests/{{.Cid}}/join'">Join this contest</button></div>{{end}}
+                    {{if .ManagementButtonActive}}<div class="pull-right"><button type="button" class="btn btn-primary" onclick="location.href='/contests/{{.Cid}}/management/'">Management</button></div>{{end}}
+                </h1>
             </div>
         </div>
         <div style="margin-top:10px;" class="container">
@@ -68,5 +72,4 @@
         </div>
     </div>
 </body>
-
 </html>

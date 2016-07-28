@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{html .ContestName}} 基本設定| popcon</title>
+    <!-- BootstrapのCSS読み込み -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- jQuery読み込み -->
+    <script src="/static/js/jquery-1.12.2.min.js"></script>
+    <!-- BootstrapのJS読み込み -->
+    <script src="/static/js/bootstrap.min.js"></script>
+    <!--footerFixed JS-->
+    <script src="/static/js/footer-fixed.js"></script>
+    <!--Bootstrap Datepicker-->
+    <link rel="stylesheet" type="text/css" href="/static/css/bootstrap-datepicker.min.css">
+    <script type="text/javascript" src="/static/js/bootstrap-datepicker.min.js"></script>
+    <script type="text/javascript" src="/static/locales/bootstrap-datepicker.ja.min.js"></script>
+    <style>
+        #footer {
+            text-align: center;
+            padding-bottom: 15px;
+        }
+        .date-and-time{
+           padding:4px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbarEexample">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="/">popcon</a>
+                </div>
+
+                <div class="collapse navbar-collapse" id="navbarEexample">
+                    <ul class="nav navbar-nav">
+                        <li><a href="/contests/{{.Cid}}/">コンテストトップ</a></li>
+                        <li><a href="/contests/{{.Cid}}/problems/">問題一覧</a></li>
+                        <li><a href="/contests/{{.Cid}}/submissions/">提出一覧</a></li>
+                        <li><a href="/contests/{{.Cid}}/ranking">ランキング</a></li>
+                        <p class="navbar-text"><a href="/contests/">コンテスト一覧へ</a></p>
+                    </ul>
+                    <div class="navbar-right">
+                        <p class="navbar-text">User: <a href="/userinfo">{{html .UserName}}</a></p>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="contents">
+        <div class="container">
+            <div class="page-header">
+                <div class="row">
+                    <div class="col-xs-12 col-md-4 col-md-offset-2">
+     	                <h1>基本設定</h1>
+                    </div>
+                </div>
+            </div>
+            {{with .Msg}}
+            <div class="row">
+                <div class="col-xs-12 col-md-8 col-md-offset-2">
+                    <div class="alert alert-danger" role="alert">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button>
+                        <string>Failed</strong> {{html .}}
+                    </div>
+                </div>
+            </div>
+            {{end}}
+            <form class="form-horizontal" method="post" action="/contests/{{.Cid}}/management/setting">
+                <fieldset>
+                     <div class="row">
+                        <div class="col-xs-12 col-md-5 col-md-offset-2">
+                            <div class="control-group">
+                                <label class="control-label" for="contest_name_input">コンテスト名: </label>
+                                <div class="controls">
+                                    <input type="text" name="contest_name" class="form-control" id="contest_name_input" placeholder="40文字以内" value="{{html .ContestName}}">
+                                </div>
+                            </div>
+                        </div>
+                     </div>
+                     <div class="row">
+                        <div class="col-xs-12 col-md-4 col-md-offset-2">
+                            <div class="control-group">
+                                <label class="control-label" for="start-date-picker">開始日時: </label>
+                                <div class="controls form-inline">
+                                    <input type="text" name="start_date" class="form-control datepicker" id="start-date-picker" placeholder="1970/1/1" value="{{html .StartDate}}">
+                                    <input type="time" name="start_time" class="form-control date-and-time" min="00:00" max="24:00" value="{{if (eq .StartTime "")}}00:00{{else}}{{html .StartTime}}{{end}}"></p>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="finish-date-picker">終了日時: </label>
+                                <div class="controls form-inline">
+                                    <input type="text" name="finish_date" class="form-control datepicker" id="finish-date-picker" placeholder="1970/1/1" value="{{html .FinishDate}}">
+                                    <input type="time" name="finish_time" class="form-control date-and-time" min="00:00" max="24:00" value="{{if (eq .FinishTime "")}}00:00{{else}}{{html .FinishTime}}{{end}}"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12 col-md-5 col-md-offset-2">
+                            <div class="control-group">
+                                <label class="control-label" for="description">説明(Markdown、空欄可): </label>
+                                <div class="controls">
+                                    <textarea name="description" class="form-control input-xlarge" rows="15" >{{html .Description}}</textarea>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 5px;" class="form-actions">
+                                <button type="submit" class="btn btn-primary">変更</button>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <div style="margin-top:10px;" class="container">
+            <footer class="container-fluid" id="footer">
+                <small>© 2016 Tsuzu</small>
+            </footer>
+        </div>
+    </div>
+    <script>
+        $(function(){
+            $('.datepicker').datepicker({
+                language: 'ja'
+            });
+        })
+    </script>
+</body>
+</html>

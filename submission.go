@@ -9,6 +9,7 @@ import (
 	"time"
 	"strings"
 	"github.com/cs3238-tsuzu/popcon/file_manager"
+	"github.com/naoina/genmai"
 )
 
 // Database manager for Contest and Onlinejudge
@@ -301,6 +302,24 @@ func (dm *DatabaseManager) SubmissionSetCase(sid int64, ss map[int64]SubmissionT
 	return err
 }
 
+func (dm *DatabaseManager) SubmissionList(options ...*genmai.Condition) (*[]Submission, error) {
+    var resulsts []Submission
+
+    opt := make([]interface{}, len(options))
+
+    for i := range options {
+        opt[i] = options[i]
+    }
+
+    err := dm.db.Select(&resulsts, opt...)
+
+    if err != nil {
+        return nil, err
+    }
+
+    return &resulsts, nil
+}
+
 type SubmissionView struct {
 	SubmitTime int64
 	Cid int64
@@ -439,10 +458,11 @@ func (dm *DatabaseManager) SubmissionViewList(cid, iid, lid, pidx, stat, offset,
 type SubmissionViewEach struct {
 	SubmissionView
 	HighlightType string
+    Iid int64
 }
 
 func (dm *DatabaseManager) SubmissionViewFind(sid int64) (*SubmissionViewEach, error) {
-	query := "select submission.submit_time, contest_problem.cid, contest_problem.pidx, contest_problem.name, user.uid, user.user_name, language.name, submission.score, submission.status, submission.prog, submission.time, submission.mem, submission.sid, language.highlight_type from submission inner join contest_problem on submission.pid = contest_problem.pid inner join user on submission.iid = user.iid inner join language on submission.lang = language.lid where submission.sid = " + strconv.FormatInt(sid, 10)
+	query := "select submission.submit_time, contest_problem.cid, contest_problem.pidx, contest_problem.name, user.uid, user.user_name, language.name, submission.score, submission.status, submission.prog, submission.time, submission.mem, submission.sid, language.highlight_type, submission.iid from submission inner join contest_problem on submission.pid = contest_problem.pid inner join user on submission.iid = user.iid inner join language on submission.lang = language.lid where submission.sid = " + strconv.FormatInt(sid, 10)
 
     rows, err := dm.db.DB().Query(query)
 	
@@ -458,7 +478,7 @@ func (dm *DatabaseManager) SubmissionViewFind(sid int64) (*SubmissionViewEach, e
 	var status int64
 	var prog uint64
 	
-	err = rows.Scan(&sv.SubmitTime, &sv.Cid, &sv.Pidx, &sv.Name, &sv.Uid, &sv.UserName, &sv.Lang, &sv.Score, &status, &prog, &sv.Time, &sv.Mem, &sv.Sid, &sv.HighlightType)
+	err = rows.Scan(&sv.SubmitTime, &sv.Cid, &sv.Pidx, &sv.Name, &sv.Uid, &sv.UserName, &sv.Lang, &sv.Score, &status, &prog, &sv.Time, &sv.Mem, &sv.Sid, &sv.HighlightType, &sv.Iid)
 
 	if err != nil {
 		return nil, err

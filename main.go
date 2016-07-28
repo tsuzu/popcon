@@ -78,11 +78,11 @@ func main() {
 	fmt.Println(*prob)
 */
 
-	/*mainDB.SubmissionNew(1, 1, 1, `#include <iostream>
+	mainDB.SubmissionNew(5, 1, 1, `#include <iostream>
 
 int main() {
 	std::cout << "Hello, world!" << std::endl;
-}`)*/
+}`)
 
 	mux := http.NewServeMux()
 	handlers, err := CreateHandlers()

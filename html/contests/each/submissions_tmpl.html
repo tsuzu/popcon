@@ -7,7 +7,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>popcon</title>
+    <title>{{html .ContestName}} Submissions| popcon</title>
     <!--Bootstrap CSS-->
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
     <!--jQuery-->
@@ -59,8 +59,10 @@
             </div>
 
             <ul class="nav nav-pills">
+                {{if .AllEnabled}}
 	            <li role="presentation" {{if (eq .User "")}}class="active"{{end}}><a href="/contests/{{.Cid}}/submissions/">全提出</a></li>
-	            <li role="presentation" {{if (eq .User .Uid)}}class="active"{{end}}><a href="/contests/{{.Cid}}/submissions/?user={{.Uid}}">自分</a></li>
+	            {{end}}
+                <li role="presentation" {{if (eq .User .Uid)}}class="active"{{end}}><a href="/contests/{{.Cid}}/submissions/?user={{.Uid}}">自分</a></li>
                 {{if (eq (eq .User "" .Uid) false)}}<li role="presentation" class="active"><a href="/contests/{{.Cid}}/submissions/?user={{html .User}}">他<span class="badge">{{html .User}}</span></a></li>{{end}}
             </ul>
             <div style="margin-top:5px;">

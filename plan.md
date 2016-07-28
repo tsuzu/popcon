@@ -29,12 +29,13 @@
 
 # contestのフォルダ構成
 - ./contests
-    - XXX(cid) ... コンテストトップページのhtml(XSS対策)
+    - XXX(cid) ... コンテストトップページのhtml or Markdown
 
 # contest_problemsのフォルダ構成
 - ./contest_problems
     - XXX(pid)/
         - prob ... 問題文(サンプルを含む)のhtml or Markdown
+        - checker ... チェック用プログラムの言語/コードのJsonエンコード
         - .cases_lock ... casesのロック
         - cases/
             XXX_in ... 入力

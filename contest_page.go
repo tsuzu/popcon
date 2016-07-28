@@ -10,10 +10,13 @@ import "errors"
 import "net/url"
 import "strings"
 
+var Location = time.FixedZone("Asia/Tokyo", 9 * 60 * 60)
+
 const ContentsPerPage = 50
 
 type ContestsTopHandler struct {
     Temp *template.Template
+    NewContest *template.Template
     EachHandler *ContestEachHandler
 }
 
@@ -38,13 +41,19 @@ func CreateContestsTopHandler() (*ContestsTopHandler, error) {
         return nil, errors.New("Failed to load /contests/index_temp.html")
     }
 
+    newContest, err := template.ParseFiles("./html/contests/contest_new_tmpl.html")
+
+    if err != nil {
+        return nil, err
+    }
+
     ceh, err := CreateContestEachHandler()
 
     if err != nil {
         return nil, err
     }
 
-    return &ContestsTopHandler{temp, ceh}, nil
+    return &ContestsTopHandler{temp, newContest, ceh}, nil
 }
 
 func TimeRangeToString(start, finish int64) string {
@@ -52,6 +61,121 @@ func TimeRangeToString(start, finish int64) string {
     finishTime := time.Unix(finish, 0)
 
     return startTime.Format("2006/01/02 15:04:05") + "-" + finishTime.Format("2006/01/02 15:04:05")
+}
+
+func (ch ContestsTopHandler) newContestHandler(rw http.ResponseWriter, req *http.Request, std *SessionTemplateData) {
+    type TemplateVal struct {
+            UserName string
+            Msg *string
+            StartDate string
+            StartTime string
+            FinishDate string
+            FinishTime string
+            Description string
+            ContestName string
+    }
+
+    if req.Method == "POST" {
+        wrapFormStr := func(str string) string {
+			arr, has := req.Form[str]
+			if has && len(arr) != 0 {
+				return arr[0]
+			}
+			return ""
+		}
+        startDate, startTime := wrapFormStr("start_date"), wrapFormStr("start_time")
+        finishDate, finishTime := wrapFormStr("finish_date"), wrapFormStr("finish_time")
+        description := wrapFormStr("description")
+        contestName := wrapFormStr("contest_name")
+
+        startStr := startDate + " " + startTime
+        finishStr := finishDate + " " + finishTime
+
+        if len(contestName) == 0 {
+            msg := "コンテスト名が不正です。"
+            templateVal := TemplateVal{
+                std.UserID, &msg, startDate, startTime, finishDate, finishTime, description, contestName,
+            }
+
+            ch.NewContest.Execute(rw, templateVal)
+            
+            return
+        }
+        
+        start, err := time.ParseInLocation("2006/01/02 15:04", startStr, Location)
+
+        if err != nil {
+            msg := "開始日時の値が不正です。"
+            templateVal := TemplateVal{
+                std.UserID, &msg, startDate, startTime, finishDate, finishTime, description, contestName,
+            }
+
+            ch.NewContest.Execute(rw, templateVal)
+            
+            return
+        }
+
+        finish, err := time.ParseInLocation("2006/01/02 15:04", finishStr, Location)
+
+        if err != nil {
+            msg := "終了日時の値が不正です。"
+            templateVal := TemplateVal{
+                std.UserID, &msg, startDate, startTime, finishDate, finishTime, description, contestName,
+            }
+
+            ch.NewContest.Execute(rw, templateVal)
+            
+            return
+        }
+
+        if start.Unix() >= finish.Unix() || start.Unix() < time.Now().Unix() {
+            msg := "開始日時及び終了日時の値が不正です。"
+            templateVal := TemplateVal{
+                std.UserID, &msg, startDate, startTime, finishDate, finishTime, description, contestName,
+            }
+
+            ch.NewContest.Execute(rw, templateVal)
+            
+            return
+        }
+
+        cid, err := mainDB.ContestNew(contestName, start.Unix(), finish.Unix(), std.Iid, 0)
+
+        if err != nil {
+            if strings.Index(err.Error(), "Duplicate") != -1 {
+                msg := "すでに存在するコンテスト名です。"
+                templateVal := TemplateVal{
+                    std.UserID, &msg, startDate, startTime, finishDate, finishTime, description, contestName,
+                }
+
+                ch.NewContest.Execute(rw, templateVal)
+            
+                return
+            }else {
+                rw.WriteHeader(http.StatusInternalServerError)
+                rw.Write([]byte(ISE500))
+
+                return
+            }
+        }
+
+        err = mainDB.ContestDescriptionUpdate(cid, description)
+
+        if err != nil {
+            fmt.Println(err)
+        }
+
+        RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/")
+    }else if req.Method == "GET"{
+        templateVal := TemplateVal{
+            UserName: std.UserID,
+        }
+
+        ch.NewContest.Execute(rw, templateVal)
+    }else {
+        rw.WriteHeader(http.StatusBadRequest)
+        rw.Write([]byte(BR400))
+    }
 }
 
 func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -87,10 +211,10 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
         case "/closed/":
             reqType = 2
             cond = mainDB.db.Where("finish_time", "<=", timeNow)
-        case "/new/":
-            rw.WriteHeader(http.StatusNotImplemented)
-        
-            rw.Write([]byte(NI501))
+        case "/new":
+            ch.newContestHandler(rw, req, std)
+
+            return
         default:
             if len(req.URL.Path) == 0 {
                 RespondRedirection(rw, "/contests/")
@@ -122,7 +246,7 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
             if err != nil {
                 rw.WriteHeader(http.StatusNotFound)
                 rw.Write([]byte(NF404))
-
+                
                 return
             }
 

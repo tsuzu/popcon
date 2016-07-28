@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{html .ContestName}} 問題{{if .Mode}}作成2{{else}}編集{{end}}| popcon</title>
+    <!-- BootstrapのCSS読み込み -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- jQuery読み込み -->
+    <script src="/static/js/jquery-1.12.2.min.js"></script>
+    <!-- BootstrapのJS読み込み -->
+    <script src="/static/js/bootstrap.min.js"></script>
+    <!--footerFixed JS-->
+    <script src="/static/js/footer-fixed.js"></script>
+    <style>
+        #footer {
+            text-align: center;
+            padding-bottom: 15px;
+        }
+        #check_code {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbarEexample">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="/">popcon</a>
+                </div>
+
+                <div class="collapse navbar-collapse" id="navbarEexample">
+                    <ul class="nav navbar-nav">
+                        <li><a href="/contests/{{.Cid}}/">コンテストトップ</a></li>
+                        <li><a href="/contests/{{.Cid}}/problems/">問題一覧</a></li>
+                        <li><a href="/contests/{{.Cid}}/submissions/">提出一覧</a></li>
+                        <li><a href="/contests/{{.Cid}}/ranking">ランキング</a></li>
+                        <p class="navbar-text"><a href="/contests/">コンテスト一覧へ</a></p>
+                    </ul>
+                    <div class="navbar-right">
+                        <p class="navbar-text">User: <a href="/userinfo">{{html .UserName}}</a></p>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <div class="row">
+                <div class="col-xs-12 col-md-4 col-md-offset-2">
+     	            <h1>問題{{if .Mode}}作成{{else}}編集{{end}}</h1>
+                </div>
+            </div>
+        </div>
+        {{with .Msg}}
+        <div class="row">
+            <div class="col-xs-12 col-md-8 col-md-offset-2">
+                <div class="alert alert-danger" role="alert">
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button>
+                    <string>Failed</strong> {{html .}}
+                </div>
+            </div>
+        </div>
+        {{end}}
+        <form class="form-horizontal" method="post" action="/contests/{{.Cid}}/management/problems/new">
+            <fieldset>
+                 <div class="row">
+                    <div class="col-xs-12 col-md-4 col-md-offset-2">
+                        <div class="control-group">
+                            <label class="control-label" for="pidx_input">問題番号: </label>
+                            <div class="controls">
+                                <input type="number" name="pidx" class="form-control input-sm" id="pidx_input" value="{{.Pidx}}">
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label" for="prob_name_input">問題名: </label>
+                            <div class="controls">
+                                <input type="text" name="problem_name" class="form-control input-sm" id="prob_name_input" placeholder="40文字以内" value="{{html .Name}}">
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label" for="time_input">制限時間(s): </label>
+                            <div class="controls">
+                                <input type="number" name="time" min="1" max="10" class="form-control input-sm" id="time_input" value="{{.Time}}">
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label" for="mem_input">メモリ制限(MB): </label>
+                            <div class="controls">
+                                <input type="number" name="mem" min="32" max="1024" class="form-control input-sm" id="mem_input" value="{{.Mem}}">
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label" for="type_select">ジャッジタイプ: </label>
+                            <div class="controls">
+                                <select name="type" class="form-control input-sm" id="type_select">
+                                    <option value="0" {{if (eq .Type 0)}}selected{{end}}>完全マッチ</option>
+                                    <option value="1" {{if (eq .Type 1)}}selected{{end}}>コード実行</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="row">
+                        <div class="col-xs-12 col-md-5 col-md-offset-2">
+                            <label class="control-label" for="prob_input">問題文(Markdown): </label>
+                            <div class="controls">
+                                <textarea name="prob" id="prob_input" class="form-control input-xlarge" rows="15" >{{html .Prob}}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="check_code">
+                        <div class="control-group row">
+                            <div class="col-xs-12 col-md-4 col-md-offset-2">
+                                <label class="control-label" for="language_select">ジャッジプログラム言語: </label>
+                                <div class="controls">
+                                    <select name="lang" class="form-control input-sm" id="language_select">
+                                        {{$top := .}}
+                                        {{range .Languages}}
+                                            <option value="{{.Lid}}" {{if (eq $top.Lang .Lid)}}{{end}}>{{html .Name}}</option>
+                                        {{end}}
+                                	</select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group row">
+                            <div class="col-xs-12 col-md-5 col-md-offset-2">
+                                <label class="control-label" for="code_input">ジャッジプログラム: </label>
+                                <div class="controls">
+                                    <textarea name="code" id="code_input" class="form-control input-xlarge" rows="15" >{{html .Code}}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-xs-12 col-md-5 col-md-offset-2">
+                            <div style="margin-top: 5px;" class="form-actions">
+                                <button type="submit" class="btn btn-primary">Submit</button>
+                            </div>
+                        </div>
+                    </div>     
+                </div>
+            </fieldset>
+        </form>
+    </div>
+    <footer class="container-fluid" id="footer">
+        <small>© 2016 Tsuzu</small>
+    </footer>
+    <script>
+        $(function(){
+            if($("#type_select").val() == "1"){
+                $("#check_code").show();
+            }
+            $("#type_select").change(function(){
+                console.log("hog")
+                if($("#type_select").val() == "1"){
+                    $("#check_code").show();
+                }else {
+                    $("#check_code").hide();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -12,7 +12,7 @@ type User struct {
 	UserName   string `default:""`
 	PassHash   []byte 
 	Email      string `default:""`
-	GroupID  int `default:""`
+	Gid  int64 `default:""`
 }
 
 func (dm *DatabaseManager) CreateUserTable() error {
@@ -33,7 +33,7 @@ func (dm *DatabaseManager) CreateUserTable() error {
 // userID is the primary key
 // userName is the unique key
 // len(userID) <= 20, len(userName) <= 256 len(pass) <= 50, len(email) <= 50
-func (dm *DatabaseManager) UserAdd(userID string, userName string, pass string, email string, groupID int) (int64, error) {
+func (dm *DatabaseManager) UserAdd(userID string, userName string, pass string, email string, groupID int64) (int64, error) {
 	if len(userID) > 20 {
 		return 0, errors.New("error: len(userID) > 20")
 	}
@@ -57,13 +57,13 @@ func (dm *DatabaseManager) UserAdd(userID string, userName string, pass string, 
 		UserName: userName,
 		PassHash: passHashArr[:],
 		Email: email,
-		GroupID: groupID,
+		Gid: groupID,
 	})
 }
 
 // UserUpdate is a function to add a new user
 // len(userID) <= 20, len(userName) <= 256 len(pass) <= 50, len(email) <= 50
-func (dm *DatabaseManager) UserUpdate(internalID int, userID string, userName string, pass string, email string, groupID int) error {
+func (dm *DatabaseManager) UserUpdate(internalID int, userID string, userName string, pass string, email string, groupID int64) error {
 	if len(userID) > 20 {
 		return errors.New("error: len(userID) > 20")
 	}
@@ -86,7 +86,7 @@ func (dm *DatabaseManager) UserUpdate(internalID int, userID string, userName st
 		UserName: userName,
 		PassHash: passHashArr[:],
 		Email: email,
-		GroupID: groupID,
+		Gid: groupID,
 	})
 
 	return err

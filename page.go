@@ -202,7 +202,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 					return
 				}
 
-				if backurl[0][:2] == "//" {
+				if len(backurl[0]) >= 2 && backurl[0][:2] == "//" {
 					rw.WriteHeader(http.StatusBadRequest)
 					fmt.Fprint(rw, BR400)
 
