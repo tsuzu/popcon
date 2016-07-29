@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"text/template"
 	htmlTemplate "html/template"
 	"net/http"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/microcosm-cc/bluemonday"
@@ -25,6 +25,7 @@ type ContestEachHandler struct {
 	ManSet   *template.Template
 	ManPro   *template.Template
 	ManProV  *template.Template
+	ManTc    *template.Template
 }
 
 func (ceh *ContestEachHandler) checkAdmin(cont *Contest, std SessionTemplateData) bool {
@@ -364,7 +365,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				return
 			}
 
-			if !isAdmin && submission.Iid != std.Iid {
+			if !isAdmin && submission.Iid != std.Iid && !isFinished {
 				rw.WriteHeader(http.StatusForbidden)
 
 				rw.Write([]byte(FBD403))
@@ -809,22 +810,60 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			}
 		} else if len(req.URL.Path) >= 9 && req.URL.Path[:9] == "problems/" {
 			http.StripPrefix("problems/", http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-				if req.URL.Path == "new" {
+				if req.URL.Path == "" {
 					type TemplateVal struct {
-						Cid       int64
+						Cid         int64
 						ContestName string
-						UserName  string
-						Msg       *string
-						Mode      bool
-						Pidx      int64
-						Name      string
-						Time      int64
-						Mem       int64
-						Type      int64
-						Prob      string
-						Lang		  int64
-						Languages []Language
-						Code      string
+						UserName    string
+						Problems    []ContestProblem
+					}
+
+					list, err := mainDB.ContestProblemList(cid)
+
+					if err != nil {
+						rw.WriteHeader(http.StatusInternalServerError)
+						rw.Write([]byte(ISE500))
+
+						return
+					}
+
+					ceh.ManProV.Execute(rw, TemplateVal{cid, cont.Name, std.UserName, *list})
+				} else if upidx, err := strconv.ParseInt(req.URL.Path, 10, 64); req.URL.Path == "new" || err == nil {
+					if err != nil {
+						upidx = -1
+
+						cnt, err := mainDB.ContestProblemCount(cid)
+
+						if err != nil {
+							rw.WriteHeader(http.StatusInternalServerError)
+							rw.Write([]byte(ISE500))
+
+							return
+						}
+
+						if cnt >= 50 {
+							rw.WriteHeader(http.StatusBadRequest)
+							rw.Write([]byte(BR400))
+
+							return
+						}
+					}
+
+					type TemplateVal struct {
+						Cid         int64
+						ContestName string
+						UserName    string
+						Msg         *string
+						Mode        bool
+						Pidx        int64
+						Name        string
+						Time        int64
+						Mem         int64
+						Type        int64
+						Prob        string
+						Lang        int64
+						Languages   []Language
+						Code        string
 					}
 
 					wrapForm := func(str string) int64 {
@@ -858,8 +897,59 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 						return
 					}
 
+					var cp *ContestProblem
+					if upidx != -1 {
+						cp, err = mainDB.ContestProblemFind2(cid, upidx)
+
+						if err != nil {
+							if err.Error() == "Unknown problem" {
+								rw.WriteHeader(http.StatusNotFound)
+								rw.Write([]byte(NF404))
+
+								return
+							} else {
+								rw.WriteHeader(http.StatusInternalServerError)
+								rw.Write([]byte(ISE500))
+
+								return
+							}
+						}
+					}
+				
 					if req.Method == "GET" {
-						ceh.ManPro.Execute(rw, TemplateVal{Cid: cid, ContestName: cont.Name, Time: 1, Mem: 32, UserName: std.UserName, Mode: true, Languages: *languages})
+						temp := TemplateVal{Cid: cid, ContestName: cont.Name, Time: 1, Mem: 32, UserName: std.UserName, Mode: true, Languages: *languages}
+
+						if upidx != -1 {
+							lid, checker, err := cp.LoadChecker()
+
+							if err != nil {
+								rw.WriteHeader(http.StatusInternalServerError)
+								rw.Write([]byte(ISE500))
+
+								return
+							}
+
+							stat, err := cp.LoadStatement()
+
+							if err != nil {
+								rw.WriteHeader(http.StatusInternalServerError)
+								rw.Write([]byte(ISE500))
+
+								return
+							}
+							temp.Mode = false
+							temp.Name = cp.Name
+							temp.Time = cp.Time
+							temp.Mem = cp.Mem
+							temp.Pidx = upidx
+							temp.Type = int64(cp.Type)
+							temp.Lang = lid
+							temp.Code = checker
+							temp.Prob = *stat
+
+						}
+
+						ceh.ManPro.Execute(rw, temp)
 
 						return
 					} else if req.Method == "POST" {
@@ -873,13 +963,24 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 							return
 						}
 
+						if len(name) == 0 || !UTF8StringLengthAndBOMCheck(name, 40) || strings.TrimSpace(name) == "" {
+							msg := "問題名が不正です。"
+							mode := true
+							if upidx == -1 {
+								mode = false
+							}
+							ceh.ManPro.Execute(rw, TemplateVal{cid, cont.Name, std.UserName, &msg, mode, pidx, name, time, mem, jtype, prob, lid, *languages, code})
+
+							return
+						}
+
 						if _, err := mainDB.LanguageFind(lid); err != nil {
 							if err.Error() == "Unknown language" {
 								rw.WriteHeader(http.StatusBadRequest)
 								rw.Write([]byte(BR400))
 
 								return
-							}else {
+							} else {
 								rw.WriteHeader(http.StatusInternalServerError)
 								rw.Write([]byte(ISE500))
 
@@ -887,15 +988,29 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 							}
 						}
 
-						cp, err := cont.ProblemAdd(pidx, name, time, mem, JudgeType(jtype))
+						if upidx != -1 {
+							cp.Pidx = pidx
+							cp.Name = name
+							cp.Time = time
+							cp.Mem = mem
+							cp.Type = int(jtype)							
+
+							err = mainDB.ContestProblemUpdate(*cp)
+						}else {
+							cp, err = cont.ProblemAdd(pidx, name, time, mem, JudgeType(jtype))
+						}
 
 						if err != nil {
 							if strings.Index(err.Error(), "Duplicate") != -1 {
 								msg := "使用されている問題番号です。"
-								ceh.ManPro.Execute(rw, TemplateVal{cid, cont.Name, std.UserName, &msg, true, pidx, name, time, mem, jtype, prob, lid, *languages, code})
+								mode := false
+								if upidx == -1 {
+									mode = true
+								}
+								ceh.ManPro.Execute(rw, TemplateVal{cid, cont.Name, std.UserName, &msg, mode, pidx, name, time, mem, jtype, prob, lid, *languages, code})
 
 								return
-							}else {
+							} else {
 								rw.WriteHeader(http.StatusInternalServerError)
 								rw.Write([]byte(ISE500))
 
@@ -921,33 +1036,143 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 							return
 						}
 
-						RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/management/problems/" + strconv.FormatInt(cp.Pidx, 10))
+						RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/problems/")
 					} else {
 						rw.WriteHeader(http.StatusBadRequest)
 						rw.Write([]byte(BR400))
 
 						return
 					}
-				}else if req.URL.Path == "" {
-					type TemplateVal struct {
-						Cid int64
-						ContestName string
-						UserName string
-						Problems []ContestProblem
-					}
-
-					list, err := mainDB.ContestProblemList(cid)
-
-					if err != nil {
-						rw.WriteHeader(http.StatusInternalServerError)
-						rw.Write([]byte(ISE500))
-
-						return
-					}
-
-					ceh.ManProV.Execute(rw, TemplateVal{cid, cont.Name, std.UserName, *list})
 				}
 			})).ServeHTTP(rw, req)
+		} else if len(req.URL.Path) >= 11 && req.URL.Path[:10] == "testcases/" {
+			pidx, err := strconv.ParseInt(req.URL.Path[10:], 10, 64)
+
+			if err != nil {
+				rw.WriteHeader(http.StatusNotFound)
+				rw.Write([]byte(NF404))
+
+				return
+			}
+
+			cp, err := mainDB.ContestProblemFind2(cid, pidx)
+
+			if err != nil {
+				rw.WriteHeader(http.StatusNotFound)
+				rw.Write([]byte(NF404))
+
+				return
+			}
+
+			type TemplateVal struct {
+				Cid int64
+				Pidx int64
+				ContestName string
+				UserName string
+				Testcases []TestCase
+				Scoresets []ScoreSet
+				Msg	    *string
+			}
+
+			if req.Method == "GET" {
+				cases, sets, err := cp.LoadTestCases()
+
+				if err != nil {
+					rw.WriteHeader(http.StatusInternalServerError)
+					rw.Write([]byte(ISE500))
+
+					return
+				}
+
+				ceh.ManTc.Execute(rw, TemplateVal{cid, pidx, cont.Name, std.UserName, *cases, *sets, nil})
+			}else if req.Method == "POST" {
+				caseNames := req.Form["case_name[]"]
+				caseInputs := req.Form["case_input[]"]
+				caseOutputs := req.Form["case_output[]"]
+				setScores := req.Form["set_score[]"]
+				setCases := req.Form["set_case[]"]
+
+				if !(len(caseNames) == len(caseInputs) && len(caseNames) == len(caseOutputs)) || len(caseNames) > 50 {
+					rw.WriteHeader(http.StatusBadRequest)
+					rw.Write([]byte(BR400))
+
+					return
+				}
+
+				if len(setScores) != len(setCases) || len(setScores) > 50 {
+					rw.WriteHeader(http.StatusBadRequest)
+					rw.Write([]byte(BR400))
+
+					return
+				}
+
+				cases := make([]TestCase, len(caseNames))
+				for i := range cases {
+					cases[i] = TestCase{caseNames[i], caseInputs[i], caseOutputs[i]}
+				}
+				illegal := false
+
+				scores := make([]ScoreSet, len(setScores))
+				for i := range scores {
+					caseIds := make([]int, 0, 50)
+					for _, str := range strings.Split(setCases[i], ",") {
+						str = strings.TrimSpace(str)
+
+						id, err := strconv.ParseInt(str, 10, 32)
+
+						if err != nil {
+							illegal = true
+						}
+
+						if id < 0 || int(id) >= len(cases) {
+							illegal = true
+						}
+
+						caseIds = append(caseIds, int(id))
+					}
+
+					score, err := strconv.ParseInt(setScores[i], 10, 32)
+
+					if err != nil {
+						illegal = true
+					}
+
+					if score < 10 || score > 2000 {
+						illegal = true
+					}
+
+					scores[i] = ScoreSet{caseIds, int(score)}
+				}
+
+				if illegal {
+					msg := "不正なパラメータがあります。"
+
+					ceh.ManTc.Execute(rw, TemplateVal{cid, pidx, cont.Name, std.UserName, cases, scores, &msg})
+
+					return
+				}
+
+				err := cp.UpdateTestCases(cases, scores)
+
+				if err != nil {
+					rw.WriteHeader(http.StatusInternalServerError)
+					rw.Write([]byte(ISE500))
+
+					return
+				}
+
+				RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/management/problems/")
+			}else {
+				rw.WriteHeader(http.StatusBadRequest)
+				rw.Write([]byte(BR400))
+
+				return			
+			}
+
+			
+
+			
+
 		} else {
 			rw.WriteHeader(http.StatusNotFound)
 
@@ -1042,5 +1267,11 @@ func CreateContestEachHandler() (*ContestEachHandler, error) {
 		return nil, err
 	}
 
-	return &ContestEachHandler{top.Lookup("index_tmpl.html"), probList, probView, subList.Lookup("submissions_tmpl.html"), subView.Lookup("submission_view_tmpl.html"), submit, man, manre, manse.Lookup("setting_tmpl.html"), manpr, manprv}, nil
+	mantc, err := template.ParseFiles("./html/contests/each/management/testcases_tmpl.html")
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ContestEachHandler{top.Lookup("index_tmpl.html"), probList, probView, subList.Lookup("submissions_tmpl.html"), subView.Lookup("submission_view_tmpl.html"), submit, man, manre, manse.Lookup("setting_tmpl.html"), manpr, manprv, mantc}, nil
 }

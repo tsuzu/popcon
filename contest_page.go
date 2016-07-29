@@ -91,7 +91,7 @@ func (ch ContestsTopHandler) newContestHandler(rw http.ResponseWriter, req *http
         startStr := startDate + " " + startTime
         finishStr := finishDate + " " + finishTime
 
-        if len(contestName) == 0 {
+        if len(contestName) == 0 || !UTF8StringLengthAndBOMCheck(contestName, 40) || strings.TrimSpace(contestName) == "" {
             msg := "コンテスト名が不正です。"
             templateVal := TemplateVal{
                 std.UserID, &msg, startDate, startTime, finishDate, finishTime, description, contestName,
@@ -129,7 +129,7 @@ func (ch ContestsTopHandler) newContestHandler(rw http.ResponseWriter, req *http
         }
 
         if start.Unix() >= finish.Unix() || start.Unix() < time.Now().Unix() {
-            msg := "開始日時及び終了日時の値が不正です。"
+            msg := "開始日時または終了日時の値が不正です。"
             templateVal := TemplateVal{
                 std.UserID, &msg, startDate, startTime, finishDate, finishTime, description, contestName,
             }

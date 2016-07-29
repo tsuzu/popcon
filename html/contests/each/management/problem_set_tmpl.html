@@ -70,7 +70,7 @@
             </div>
         </div>
         {{end}}
-        <form class="form-horizontal" method="post" action="/contests/{{.Cid}}/management/problems/new">
+        <form class="form-horizontal" method="post" action="/contests/{{.Cid}}/management/problems/{{if .Mode}}new{{else}}{{.Pidx}}{{end}}">
             <fieldset>
                  <div class="row">
                     <div class="col-xs-12 col-md-4 col-md-offset-2">

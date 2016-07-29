@@ -9,7 +9,38 @@ import (
 	"text/template"
 	"reflect"
 	"time"
+	"strings"
+	"bytes"
+	"unicode/utf8"
 )
+
+var UTF8_BOM = []byte{239, 187, 191}
+var UTF8_EDL = []byte{'\r', '\n'}
+
+func HasBOM(in []byte) bool {
+	return bytes.HasPrefix(in, UTF8_BOM)
+}
+
+func StripBOM(in []byte) []byte {
+	return bytes.TrimPrefix(in, UTF8_BOM)
+}
+
+func StripEndline(in []byte) []byte {
+	return bytes.TrimPrefix(in, UTF8_EDL)
+}
+
+func UTF8StringLengthAndBOMCheck(str string, l int) bool {
+	if len(str) > l * 6 {
+		return false
+	}
+
+	if utf8.RuneCountInString(str) > l {
+		return false
+	}
+
+	return !HasBOM([]byte(str))
+}
+
 
 func TimeToString(t int64) string {
 	return time.Unix(t, 0).Format("2006/01/02 15:04:05")
@@ -202,7 +233,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 					return
 				}
 
-				if len(backurl[0]) >= 2 && backurl[0][:2] == "//" {
+				if strings.Index(backurl[0], "//") != -1 {
 					rw.WriteHeader(http.StatusBadRequest)
 					fmt.Fprint(rw, BR400)
 

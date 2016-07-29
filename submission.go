@@ -232,7 +232,7 @@ func (dm *DatabaseManager) SubmissionGetMsg(sid int64) *string {
 }
 
 func (dm *DatabaseManager) SubmissionSetMsg(sid int64, msg string) error {
-	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/msg", os.O_WRONLY|os.O_CREATE, true)
+	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/msg", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, true)
 
 	if err != nil {
 		return err
@@ -283,7 +283,7 @@ func (dm *DatabaseManager) SubmissionGetCase(sid int64) (*map[int]SubmissionTest
 }
 
 func (dm *DatabaseManager) SubmissionSetCase(sid int64, ss map[int64]SubmissionTestCase) error {
-	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/case", os.O_WRONLY, true)
+	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/case", os.O_WRONLY | os.O_CREATE | os.O_TRUNC, true)
 
 	if err != nil {
 		return err

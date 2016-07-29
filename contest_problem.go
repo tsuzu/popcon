@@ -72,7 +72,6 @@ type TestCase struct {
 }
 
 type ScoreSet struct {
-    Name string `json:"name"`
     Cases []int `json:"cases"`
     Score int `json:"score"`
 }
@@ -83,7 +82,7 @@ type CheckerInterface struct {
 }
 
 func (cp *ContestProblem) UpdateChecker(lid int64, code string) error {
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/checker", os.O_CREATE | os.O_WRONLY, true)
+    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/checker", os.O_CREATE | os.O_WRONLY | os.O_TRUNC, true)
 
     if err != nil {
         return err
@@ -115,6 +114,10 @@ func (cp *ContestProblem) LoadChecker() (int64, string, error) {
 
     if err != nil {
         return 0, "", err
+    }
+
+    if len(b) == 0 {
+        return 0, "", nil
     }
 
     var ci CheckerInterface
@@ -199,24 +202,38 @@ func (cp *ContestProblem) UpdateTestCases(cases []TestCase, scores []ScoreSet) e
     defer fp.Close()
 
     type TestCaseJson struct {
-        CaseNames map[int]string `json:"case_names"`
+        CaseNames map[string]string `json:"case_names"`
         Scores []ScoreSet `json:"scores"`
     }    
 
     var tcj TestCaseJson
 
     tcj.Scores = scores
-    
+    tcj.CaseNames = make(map[string]string)
+
     for i := range cases {
-        tcj.CaseNames[i] = cases[i].Name
+        tcj.CaseNames[strconv.FormatInt(int64(i), 10)] = cases[i].Name
     }
 
-    json.Marshal(tcj)
+    b, err := json.Marshal(tcj)
+
+    if err != nil {
+        return err
+    }
+
+    _, err = fp.Write(b)
+
+    if err != nil {
+        return err
+    }
 
     return nil
 }
 
 func (cp *ContestProblem) LoadTestCases() (*[]TestCase, *[]ScoreSet, error) {
+    var scores []ScoreSet
+    var cases []TestCase
+    
     fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/.cases_lock", os.O_RDONLY, false)
 
     if err != nil {
@@ -228,17 +245,17 @@ func (cp *ContestProblem) LoadTestCases() (*[]TestCase, *[]ScoreSet, error) {
     fp, err := os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/data", os.O_RDONLY, 0644)
 
     if err != nil {
-        return nil, nil, err
+        return &cases, &scores, nil
     }
 
-    defer fp.Close()
-
     type TestCaseJson struct {
-        CaseNames map[int]string `json:"case_names"`
+        CaseNames map[string]string `json:"case_names"`
         Scores []ScoreSet `json:"scores"`
     }
 
     b, err := ioutil.ReadAll(fp)
+
+    fp.Close()
 
     if err != nil {
         return nil, nil, err
@@ -246,21 +263,29 @@ func (cp *ContestProblem) LoadTestCases() (*[]TestCase, *[]ScoreSet, error) {
 
     var tcj TestCaseJson
 
-    json.Unmarshal(b, &tcj)
+    err = json.Unmarshal(b, &tcj)
 
-    scores := tcj.Scores
+    if err != nil {
+        return &cases, &scores, nil
+    }
+
+    scores = tcj.Scores
     
-    cases := make([]TestCase, len(tcj.CaseNames))
+    cases = make([]TestCase, len(tcj.CaseNames))
 
-    for i := range tcj.CaseNames {
-        var tcase TestCase
-        fp, err := os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(int64(i), 10) + "_in", os.O_RDONLY, 0644)
+    for x := range tcj.CaseNames {
+        i, err := strconv.ParseInt(x, 10, 32)
 
         if err != nil {
             return nil, nil, err
         }
 
-        defer fp.Close()
+        var tcase TestCase
+        fp, err := os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(i, 10) + "_in", os.O_RDONLY, 0644)
+
+        if err != nil {
+            return nil, nil, err
+        }
 
         b, err := ioutil.ReadAll(fp)
 
@@ -272,13 +297,11 @@ func (cp *ContestProblem) LoadTestCases() (*[]TestCase, *[]ScoreSet, error) {
 
         fp.Close()
 
-        fp, err = os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(int64(i), 10) + "_out", os.O_RDONLY, 0644)
+        fp, err = os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(i, 10) + "_out", os.O_RDONLY, 0644)
 
         if err != nil {
             return nil, nil, err
         }
-
-        defer fp.Close()
 
         b, err = ioutil.ReadAll(fp)
 
@@ -289,7 +312,7 @@ func (cp *ContestProblem) LoadTestCases() (*[]TestCase, *[]ScoreSet, error) {
 
         tcase.Output = string(b)
 
-        tcase.Name = tcj.CaseNames[i]
+        tcase.Name = tcj.CaseNames[x]
 
         fp.Close()
 

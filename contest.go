@@ -98,16 +98,6 @@ func (dm *DatabaseManager) ContestUpdate(cid int64, name string, start int64, fi
         return err
     }
 
-    fm, err := FileManager.OpenFile(ContestDir + strconv.FormatInt(cont.Cid, 10), os.O_CREATE | os.O_WRONLY, true)
-
-    if err != nil {
-        dm.ContestDelete(cont.Cid)
-
-        return err
-    }
-
-    fm.Close()
-
     return nil
 }
 
@@ -146,7 +136,7 @@ func (dm *DatabaseManager) ContestFind(cid int64) (*Contest, error) {
 }
 
 func (dm *DatabaseManager) ContestDescriptionUpdate(cid int64, desc string) error {
-    fm, err := FileManager.OpenFile(ContestDir + strconv.FormatInt(cid, 10), os.O_WRONLY, true)
+    fm, err := FileManager.OpenFile(ContestDir + strconv.FormatInt(cid, 10), os.O_WRONLY | os.O_TRUNC, true)
 
     if err != nil {
         return err

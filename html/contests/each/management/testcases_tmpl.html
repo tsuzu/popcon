@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{html .ContestName}} テストケース設定| popcon</title>
+    <!-- BootstrapのCSS読み込み -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- jQuery読み込み -->
+    <script src="/static/js/jquery-1.12.2.min.js"></script>
+    <!-- BootstrapのJS読み込み -->
+    <script src="/static/js/bootstrap.min.js"></script>
+    <!--footerFixed JS-->
+    <script src="/static/js/footer-fixed.js"></script>
+    <style>
+        #footer {
+            text-align: center;
+            padding-bottom: 15px;
+        }
+        
+        @media (min-width: 768px) {
+            .io_textarea {
+                width: 50% !important;
+                box-sizing: border-box;
+            }
+            .io_col_sm_6 {}
+        }
+        
+        .id_p {
+            display: inline;
+            zoom: 1;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbarEexample">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="/">popcon</a>
+                </div>
+
+                <div class="collapse navbar-collapse" id="navbarEexample">
+                    <ul class="nav navbar-nav">
+                        <li><a href="/contests/{{.Cid}}/">コンテストトップ</a></li>
+                        <li><a href="/contests/{{.Cid}}/problems/">問題一覧</a></li>
+                        <li><a href="/contests/{{.Cid}}/submissions/">提出一覧</a></li>
+                        <li><a href="/contests/{{.Cid}}/ranking">ランキング</a></li>
+                        <p class="navbar-text"><a href="/contests/">コンテスト一覧へ</a></p>
+                    </ul>
+                    <div class="navbar-right">
+                        <p class="navbar-text">User: <a href="/userinfo">{{html .UserName}}</a></p>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <div class="row">
+                <div class="col-xs-12 col-md-4 col-md-offset-2">
+                    <h1>テストケース編集</h1>
+                </div>
+            </div>
+        </div>
+        {{with .Msg}}
+        <div class="row">
+            <div class="col-xs-12 col-md-8 col-md-offset-2">
+                <div class="alert alert-danger" role="alert">
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button>
+                    <string>Failed</strong> {{html .}}
+                </div>
+            </div>
+        </div>
+        {{end}}
+        <form class="form-horizontal" method="post" action="/contests/{{.Cid}}/management/testcases/{{.Pidx}}">
+            <fieldset>
+                <div class="row">
+                    <div class="col-xs-12 col-md-8 col-md-offset-2">
+                        <legend>テストケース(コードチェックの場合出力は空欄)</legend>
+                        <div id="testcases_area">
+                            {{range $idx, $elm := .Testcases}}
+                            <div class="testcase" style="margin-top: 10px;">
+                                <div class="form-inline">
+                                    <div class="row">
+                                        <div class="col-sm-2">
+                                            <label>ID: &nbsp;</label>
+                                            <p class="id_p form-control-static">{{$idx}}</p>
+                                        </div>
+                                        <label class="col-sm-2 control-label">名前: </label>
+                                        <div class="col-sm-8">
+                                            <input type="text" name="case_name[]" style="width:100%;" class="form-control" placeholder="40文字以内" value="{{html $elm.Name}}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label>入出力: </label>
+                                    <div class="form-inline" style="font-size: 0">
+                                        <textarea name="case_input[]" class="io_textarea form-control input-xlarge" rows="5">{{html $elm.Input}}</textarea>
+                                        <textarea name="case_output[]" class="io_textarea form-control input-xlarge" rows="5">{{html $elm.Output}}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            {{end}}
+                        </div>
+                        <div style="margin-top: 5px;">
+                            <button type="button" class="btn btn-default" id="testcase_add">追加</button>
+                            <button type="button" class="btn btn-default" class="id_p" id="testcase_remove">削除</button>
+                        </div>
+
+                        <legend style="margin-top: 10px; ">スコアセット</legend>
+                        <table class="table" id="scoresets_table">
+                            <thead>
+                                <tr>
+                                    <th>スコア</th>
+                                    <th>テストケースID(半角カンマ区切り)</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="scoresets_area">
+                                <div >
+                                    {{define "CasesJoin"}}{{range $idx, $elm := .}}{{if (ne $idx 0)}},{{end}}{{$elm}}{{end}}{{end}}
+                                    {{range .Scoresets}}
+                                    <tr>
+                                        <td><input type="number" name="set_score[]" min="10" max="2000" step="10" class="id_p form-control" value="{{if (ne .Score 0)}}{{.Score}}{{end}}"></td>
+                                        <td><input type="text" name="set_case[]" class="id_p form-control" value="{{template "CasesJoin" .Cases}}"></td>
+                                    </tr>
+                                    {{end}}
+                                </div>
+                            </tbody>
+                        </table>
+                        <div style="margin-top: 5px;">
+                            <button type="button" class="btn btn-default" id="scoreset_add">追加</button>
+                            <button type="button" class="btn btn-default" class="id_p" id="scoreset_remove">削除</button>
+                        </div>
+                        <button style="margin-top: 20px;" type="submit" class="btn btn-primary">変更</button>
+                    </div>
+                </div>
+            </fieldset>
+        </form>
+        <div class="row">
+            <div class="col-xs-12 col-md-8 col-md-offset-2" style="margin-top: 5px;">
+
+            </div>
+        </div>
+    </div>
+    <footer class="container-fluid" id="footer">
+        <small>© 2016 Tsuzu</small>
+    </footer>
+    <script>
+        $(function(){
+            testcase_form_create = function(id) {
+                return `<div class="testcase" style="margin-top: 10px;">
+                                <div class="form-inline">
+                                    <div class="row">
+                                        <div class="col-sm-2">
+                                            <label>ID: &nbsp;</label>
+                                            <p class="id_p form-control-static">` + id + `</p>
+                                        </div>
+                                        <label class="col-sm-2 control-label">名前: </label>
+                                        <div class="col-sm-8">
+                                            <input type="text" name="case_name[]" style="width:100%;" class="form-control" placeholder="40文字以内" value="">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label>入出力: </label>
+                                    <div class="form-inline" style="font-size: 0">
+                                        <textarea name="case_input[]" class="io_textarea form-control input-xlarge" rows="5"></textarea>
+                                        <textarea name="case_output[]" class="io_textarea form-control input-xlarge" rows="5"></textarea>
+                                    </div>
+                                </div>
+                            </div>`;
+            }
+
+            scoreset_form = `
+            <tr>
+                <td><input type="number" name="set_score[]" min="10" max="2000" step="10" class="id_p form-control" value=""></td>
+                <td><input type="text" name="set_case[]" class="id_p form-control" value=""></td>
+            </tr>`;
+            
+            if($("#testcases_area>*").length >= 50) {
+                $("#testcase_add").hide();
+            }else {
+                $("#testcase_add").show();
+            }
+
+            if($("#testcases_area>*").length == 0) {
+                $("#testcase_remove").hide();
+            }else {
+                $("#testcase_remove").show();
+            }
+            
+            $("#testcase_add").click(function(){
+                $("#testcases_area").append(testcase_form_create($("#testcases_area>*").length));
+
+                if($("#testcases_area>*").length >= 50) {
+                    $("#testcase_add").hide();
+                }
+                $("#testcase_remove").show();
+            });
+            $("#testcase_remove").click(function(){
+                if($("#testcases_area>*").length > 0) {
+                    $("#testcases_area>*")[$("#testcases_area>*").length - 1].remove()
+                }
+
+                if($("#testcases_area>*").length == 0){
+                    $("#testcase_remove").hide();
+                }
+                $("#testcase_add").show();
+            });
+
+            if($("#scoresets_area>*").length >= 50) {
+                $("#scoreset_add").hide();
+            }else {
+                $("#scoreset_add").show();
+            }
+
+            if($("#scoresets_area>*").length == 0) {
+                $("#scoresets_table").hide();
+                $("#scoreset_remove").hide();
+            }else {
+                $("#scoresets_table").show();
+                $("#scoreset_remove").show();
+            }
+            
+            $("#scoreset_add").click(function(){
+                $("#scoresets_area").append(scoreset_form);
+
+                if($("#scoresets_area>*").length >= 50) {
+                    $("#scoreset_add").hide();
+                }
+
+                $("#scoresets_table").show();
+                $("#scoreset_remove").show();
+            });
+            $("#scoreset_remove").click(function(){
+                if($("#scoresets_area>*").length > 0) {
+                    $("#scoresets_area>*")[$("#scoresets_area>*").length - 1].remove()
+                }
+
+                if($("#scoresets_area>*").length == 0){
+                    $("#scoreset_remove").hide();
+                    $("#scoresets_table").hide();
+                }
+                $("#scoreset_add").show();
+            });
+        });
+    </script>
+</body>
+
+</html>
