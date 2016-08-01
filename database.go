@@ -24,7 +24,7 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 	var err error
 	
 	// pcpjudge Database
-	dm.db, err = genmai.New(&genmai.MySQLDialect{}, "popcon:password@/popcon")
+	dm.db, err = genmai.New(&genmai.MySQLDialect{}, settings.DB)
 //	dm.db, err = sql.Open("mysql", "popcon:password@/popcon") // Should change password
 
 	if err != nil {

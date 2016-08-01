@@ -2,5 +2,6 @@
  	"ReCAPTCHA":"hogehoge(if you don't need this function, be empty)",
 	"AddUser": true,
 	"CreateContest": true,
+	"DB": "",
 	"JudgeKey":"hoge"
 }

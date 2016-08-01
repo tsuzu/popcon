@@ -15,6 +15,7 @@ type Settings struct {
 	ReCAPTCHASecret string
 	AddUser bool
 	CreateContest bool
+	DB string
 	JudgeKey string
 }
 var settings Settings
