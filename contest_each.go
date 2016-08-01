@@ -241,7 +241,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				if len(userID) > 40 || !UTF8StringLengthAndBOMCheck(userID, 40) {
 					rw.WriteHeader(http.StatusBadRequest)
 					rw.Write([]byte(BR400))
-					
+
 					return
 				}
 
@@ -263,7 +263,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			count, err := mainDB.SubmissionViewCount(cid, iid, lang, prob, stat)
 
 			if err != nil {
-            	HttpLog.Println(std.Iid, err)
+				HttpLog.Println(std.Iid, err)
 
 				return
 			}
@@ -299,7 +299,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			langs, err := mainDB.LanguageList()
 
 			if err != nil {
-	            HttpLog.Println(std.Iid, err)
+				HttpLog.Println(std.Iid, err)
 			} else {
 				templateVal.Languages = *langs
 			}
@@ -307,7 +307,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			probs, err := mainDB.ContestProblemListLight(cid)
 
 			if err != nil {
-	            HttpLog.Println(std.Iid, err)
+				HttpLog.Println(std.Iid, err)
 			} else {
 				templateVal.Problems = *probs
 			}
@@ -476,7 +476,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			if err != nil {
 				list = &[]ContestProblemLight{}
 
-	            HttpLog.Println(std.Iid, err)
+				HttpLog.Println(std.Iid, err)
 			}
 
 			lang, err := mainDB.LanguageList()
@@ -484,7 +484,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			if err != nil {
 				lang = &[]Language{}
 
-	            HttpLog.Println(std.Iid, err)
+				HttpLog.Println(std.Iid, err)
 			}
 
 			probArr, has := req.Form["prob"]
@@ -684,7 +684,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 					SJQueue.Push(sm.Sid)
 
-					RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/management/")
+					RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/")
 				} else {
 					cp, err := mainDB.ContestProblemFind2(cid, id)
 
@@ -714,7 +714,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 						SJQueue.Push((*sml)[i].Sid)
 					}
 
-					RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/management/")
+					RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/")
 				}
 
 				RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/")
@@ -825,7 +825,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				err = mainDB.ContestDescriptionUpdate(cid, description)
 
 				if err != nil {
-		            HttpLog.Println(std.Iid, err)
+					HttpLog.Println(std.Iid, err)
 				}
 
 				RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/")
@@ -932,6 +932,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 					languages, err := mainDB.LanguageList()
 
 					if err != nil {
+						DBLog.Println(err)
 						rw.WriteHeader(http.StatusBadRequest)
 						rw.Write([]byte(BR400))
 
@@ -957,7 +958,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 							}
 						}
 					}
-				
+
 					if req.Method == "GET" {
 						temp := TemplateVal{Cid: cid, ContestName: cont.Name, Time: 1, Mem: 32, UserName: std.UserName, Mode: true, Languages: *languages}
 
@@ -1018,18 +1019,20 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 							return
 						}
 
-						if _, err := mainDB.LanguageFind(lid); err != nil {
-							if err.Error() == "Unknown language" {
-								rw.WriteHeader(http.StatusBadRequest)
-								rw.Write([]byte(BR400))
+						if jtype == 1 {
+							if _, err := mainDB.LanguageFind(lid); err != nil {
+								if err.Error() == "Unknown language" {
+									rw.WriteHeader(http.StatusBadRequest)
+									rw.Write([]byte(BR400))
 
-								return
-							} else {
-								HttpLog.Println(err)
-								rw.WriteHeader(http.StatusInternalServerError)
-								rw.Write([]byte(ISE500))
+									return
+								} else {
+									HttpLog.Println(err)
+									rw.WriteHeader(http.StatusInternalServerError)
+									rw.Write([]byte(ISE500))
 
-								return
+									return
+								}
 							}
 						}
 
@@ -1038,10 +1041,10 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 							cp.Name = name
 							cp.Time = time
 							cp.Mem = mem
-							cp.Type = int(jtype)							
+							cp.Type = int(jtype)
 
 							err = mainDB.ContestProblemUpdate(*cp)
-						}else {
+						} else {
 							cp, err = cont.ProblemAdd(pidx, name, time, mem, JudgeType(jtype))
 						}
 
@@ -1113,13 +1116,13 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			}
 
 			type TemplateVal struct {
-				Cid int64
-				Pidx int64
+				Cid         int64
+				Pidx        int64
 				ContestName string
-				UserName string
-				Testcases []TestCase
-				Scoresets []ScoreSet
-				Msg	    *string
+				UserName    string
+				Testcases   []TestCase
+				Scoresets   []ScoreSet
+				Msg         *string
 			}
 
 			if req.Method == "GET" {
@@ -1134,7 +1137,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				}
 
 				ceh.ManTc.Execute(rw, TemplateVal{cid, pidx, cont.Name, std.UserName, *cases, *sets, nil})
-			}else if req.Method == "POST" {
+			} else if req.Method == "POST" {
 				caseNames := req.Form["case_name[]"]
 				caseInputs := req.Form["case_input[]"]
 				caseOutputs := req.Form["case_output[]"]
@@ -1157,7 +1160,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 				cases := make([]TestCase, len(caseNames))
 				for i := range cases {
-					cases[i] = TestCase{caseNames[i], ReplaceEndline(caseInputs[i]) , ReplaceEndline(caseOutputs[i])}
+					cases[i] = TestCase{caseNames[i], ReplaceEndline(caseInputs[i]), ReplaceEndline(caseOutputs[i])}
 				}
 				illegal := false
 
@@ -1211,12 +1214,12 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 					return
 				}
 
-				RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/management/problems/")
-			}else {
+				RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/problems/")
+			} else {
 				rw.WriteHeader(http.StatusBadRequest)
 				rw.Write([]byte(BR400))
 
-				return			
+				return
 			}
 		} else {
 			rw.WriteHeader(http.StatusNotFound)

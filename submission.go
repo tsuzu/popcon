@@ -189,7 +189,7 @@ func (dm *DatabaseManager) SubmissionFind(sid int64) (*Submission, error) {
 	return &results[0], nil
 }
 
-func (dm *DatabaseManager) SubmissionUpdate(sid, time, mem int64, status SubmissionStatus, fin, all int) error {
+func (dm *DatabaseManager) SubmissionUpdate(sid, time, mem int64, status SubmissionStatus, fin, all int, score int64) error {
 	sm, err := dm.SubmissionFind(sid)
 
 	if err != nil {
@@ -200,6 +200,7 @@ func (dm *DatabaseManager) SubmissionUpdate(sid, time, mem int64, status Submiss
 	sm.Mem = mem
 	sm.Status = int64(status)
 	sm.Prog = uint64(fin) << 32 | uint64(all)
+	sm.Score = score
 
 	_, err = dm.db.Update(sm)
 

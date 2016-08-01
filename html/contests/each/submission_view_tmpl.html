@@ -77,7 +77,7 @@
                         </tr>
                         <tr>
                             <td>ユーザ名</td>    
-                            <td><a href="/contests/{{.Submission.Cid}}/submissions/?user={{html .Submission.Uid}}">{{html .Submission.Uid}}</a></td>
+                            <td><a href="/contests/{{.Submission.Cid}}/submissions/?user={{html .Submission.Uid}}">{{html .Submission.UserName}}</a></td>
                         <tr>
                             <td>提出日時</td>
                             <td>{{timeToString .Submission.SubmitTime}}</td>
