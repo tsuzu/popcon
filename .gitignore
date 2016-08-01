@@ -3,6 +3,7 @@ bin/*
 popcon
 deploy.sh
 popcon.json
+log
 .VSCode/
 contests/
 contest_problems/
