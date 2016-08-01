@@ -1001,7 +1001,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 						pidx, name, time, mem := wrapForm("pidx"), wrapFormStr("problem_name"), wrapForm("time"), wrapForm("mem")
 						jtype, prob, lid, code := wrapForm("type"), wrapFormStr("prob"), wrapForm("lang"), wrapFormStr("code")
 
-						if pidx == -1 || time < 1 || time > 10 || mem < 32 || mem > 1024 || jtype < 0 || jtype > 1 || lid == -1 {
+						if pidx == -1 || time < 1 || time > 10 || mem < 32 || mem > 1024 || jtype < 0 || jtype > 1 || (jtype == int64(JudgeRunningCode) && lid == -1) {
 							rw.WriteHeader(http.StatusBadRequest)
 							rw.Write([]byte(BR400))
 
@@ -1019,7 +1019,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 							return
 						}
 
-						if jtype == 1 {
+						if jtype == int64(JudgeRunningCode) {
 							if _, err := mainDB.LanguageFind(lid); err != nil {
 								if err.Error() == "Unknown language" {
 									rw.WriteHeader(http.StatusBadRequest)
