@@ -33,7 +33,7 @@ type ContestProblem struct {
 }
 
 func (cp *ContestProblem) UpdateStatement(text string) error {
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/prob", os.O_WRONLY | os.O_CREATE, true)
+    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/prob", os.O_WRONLY | os.O_CREATE | os.O_TRUNC, true)
 
     if err != nil {
         return err
@@ -480,13 +480,14 @@ func (dm *DatabaseManager) ContestProblemList(cid int64) (*[]ContestProblem, err
 func (dm *DatabaseManager) ContestProblemCount(cid int64) (int64, error) {
     var count int64    
 
-    err := dm.db.Select(&count, dm.db.Count(), dm.db.From(&ContestProblem{}), dm.db.Where("cid", "=", cid))
+    // COUNT(*)が重い
+    err := dm.db.Select(&count, dm.db.Count("pid"), dm.db.From(&ContestProblem{}), dm.db.Where("cid", "=", cid))
 
     if err != nil {
         return 0, err
     }
-
-    return count, nil
+    
+    return count , nil
 }
 
 type ContestProblemLight struct {

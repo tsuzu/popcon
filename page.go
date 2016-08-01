@@ -41,6 +41,9 @@ func UTF8StringLengthAndBOMCheck(str string, l int) bool {
 	return !HasBOM([]byte(str))
 }
 
+func ReplaceEndline(str string) string {
+	return strings.Replace(strings.Replace(str, "\r\n", "\n", -1), "\r", "\n", -1)
+}
 
 func TimeToString(t int64) string {
 	return time.Unix(t, 0).Format("2006/01/02 15:04:05")
@@ -233,7 +236,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 					return
 				}
 
-				if strings.Index(backurl[0], "//") != -1 {
+				if strings.Index(backurl[0], "//") != -1 || len(loginID[0]) > 40 {
 					rw.WriteHeader(http.StatusBadRequest)
 					fmt.Fprint(rw, BR400)
 
@@ -255,6 +258,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 				if err != nil {
 					rw.WriteHeader(http.StatusInternalServerError)
+                    HttpLog.Println("page.go:261:", err)
 
 					fmt.Fprint(rw, ISE500)
 				} else {
@@ -336,6 +340,44 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 		return nil, err
 	}
 
+	res["/signup"], err = func() (*PageHandler, error) {
+		_, err := template.ParseFiles("./html/signup_tmpl.html")
+
+		if err != nil {
+			return nil, err
+		}
+
+		f := func(rw http.ResponseWriter, req *http.Request) {
+			rw.WriteHeader(http.StatusNotImplemented)
+			rw.Write([]byte(NI501))
+
+			return
+
+			_, err := ParseRequestForUseData(req)
+
+			if err != nil {
+				RespondRedirection(rw, "/")
+
+				return
+			}
+
+			type TeplateVal struct {
+				ReCAPTCHA bool
+				Msg string
+				UserID string
+				UserName string
+				Email string
+				Password string
+				ReCAPTCHASite string
+			}
+
+			if req.Method == "GET" {
+				
+			}
+		}
+
+		return &PageHandler{f}, nil
+	}()
 	// Debug request
 	res["/quit"] = &PageHandler{
 		func(_ http.ResponseWriter, _ *http.Request) {

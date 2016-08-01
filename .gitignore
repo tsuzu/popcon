@@ -2,6 +2,7 @@ bin/*
 .DS_Store
 popcon
 deploy.sh
+popcon.json
 .VSCode/
 contests/
 contest_problems/

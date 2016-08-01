@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	htmlTemplate "html/template"
 	"net/http"
 	"strconv"
@@ -169,6 +168,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			stat, err := prob.LoadStatement()
 
 			if err != nil {
+				HttpLog.Println(err)
 				rw.WriteHeader(http.StatusInternalServerError)
 				rw.Write([]byte(ISE500))
 
@@ -238,6 +238,13 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			if userID == "" {
 				iid = -1
 			} else {
+				if len(userID) > 40 || !UTF8StringLengthAndBOMCheck(userID, 40) {
+					rw.WriteHeader(http.StatusBadRequest)
+					rw.Write([]byte(BR400))
+					
+					return
+				}
+
 				user, err := mainDB.UserFindFromUserID(userID)
 
 				if err != nil {
@@ -256,7 +263,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			count, err := mainDB.SubmissionViewCount(cid, iid, lang, prob, stat)
 
 			if err != nil {
-				fmt.Println(err) //TODO Fix
+            	HttpLog.Println(std.Iid, err)
 
 				return
 			}
@@ -292,7 +299,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			langs, err := mainDB.LanguageList()
 
 			if err != nil {
-				fmt.Println(err)
+	            HttpLog.Println(std.Iid, err)
 			} else {
 				templateVal.Languages = *langs
 			}
@@ -300,7 +307,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			probs, err := mainDB.ContestProblemListLight(cid)
 
 			if err != nil {
-				fmt.Println(err)
+	            HttpLog.Println(std.Iid, err)
 			} else {
 				templateVal.Problems = *probs
 			}
@@ -327,7 +334,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				if err == nil {
 					templateVal.Submissions = *submissions
 				} else {
-					fmt.Println(err)
+					HttpLog.Println(std.Iid, err)
 				}
 			}
 
@@ -349,7 +356,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			submission, err := mainDB.SubmissionViewFind(sid)
 
 			if err != nil {
-				fmt.Println(err) // TODO: Fix
+				HttpLog.Println(std.Iid, err)
 
 				rw.WriteHeader(http.StatusNotFound)
 				rw.Write([]byte(NF404))
@@ -381,19 +388,28 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				code = &tmp
 			}
 
+			type SubmissionTestCaseView struct {
+				SubmissionTestCase
+				StatusString string
+			}
+
 			casesMap, err := mainDB.SubmissionGetCase(sid)
-			var cases []SubmissionTestCase
+			var cases []SubmissionTestCaseView
 
 			if err == nil {
-				cases = make([]SubmissionTestCase, len(*casesMap))
+				cases = make([]SubmissionTestCaseView, len(*casesMap))
 				idx := 0
-				for _, v := range *casesMap {
-					cases[idx] = v
+				for k, v := range *casesMap {
+					if k >= len(*casesMap) {
+						k = 0
+					}
+
+					cases[k] = SubmissionTestCaseView{v, SubmissionStatusToString[v.Status]}
 
 					idx++
 				}
 			} else {
-				fmt.Println(err) // TODO: Fix
+				HttpLog.Println(std.Iid, err)
 			}
 
 			msg := mainDB.SubmissionGetMsg(sid)
@@ -405,7 +421,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			type TemplateVal struct {
 				ContestName string
 				Submission  SubmissionViewEach
-				Cases       []SubmissionTestCase
+				Cases       []SubmissionTestCaseView
 				Code        string
 				Msg         *string
 				UserName    string
@@ -460,7 +476,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			if err != nil {
 				list = &[]ContestProblemLight{}
 
-				fmt.Println(err) // TODO: Fix
+	            HttpLog.Println(std.Iid, err)
 			}
 
 			lang, err := mainDB.LanguageList()
@@ -468,7 +484,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			if err != nil {
 				lang = &[]Language{}
 
-				fmt.Println(err)
+	            HttpLog.Println(std.Iid, err)
 			}
 
 			probArr, has := req.Form["prob"]
@@ -537,6 +553,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 					return
 				} else {
+					HttpLog.Println(err)
 					rw.WriteHeader(http.StatusInternalServerError)
 					rw.Write([]byte(ISE500))
 
@@ -553,6 +570,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 					return
 				} else {
+					HttpLog.Println(err)
 					rw.WriteHeader(http.StatusInternalServerError)
 					rw.Write([]byte(ISE500))
 
@@ -563,11 +581,13 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			subm, err := mainDB.SubmissionNew(prob.Pid, std.Iid, lid, code)
 
 			if err != nil {
+				HttpLog.Println(err)
 				rw.WriteHeader(http.StatusInternalServerError)
 				rw.Write([]byte(ISE500))
 
 				return
 			}
+			SJQueue.Push(subm)
 
 			RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/submissions/"+strconv.FormatInt(subm, 10))
 		} else {
@@ -634,27 +654,37 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				}
 
 				if target == 1 {
-					_, err := mainDB.SubmissionFind(id)
+					sm, err := mainDB.SubmissionFind(id)
 
 					if err != nil {
 						if err.Error() == "Unknown submission" {
 							respondTemp("該当する提出がありません。")
 						} else {
+							HttpLog.Println(err)
 							rw.WriteHeader(http.StatusInternalServerError)
 							rw.Write([]byte(ISE500))
 						}
 						return
 					}
-					// TODO: Rejudge処理を実装
-					/*err = mainDB.SubmissionUpdate(id, 0, 0, InQueue, 0, 0)
+
+					cp, err := mainDB.ContestProblemFind(sm.Pid)
 
 					if err != nil {
+						HttpLog.Println(err)
+
 						rw.WriteHeader(http.StatusInternalServerError)
 						rw.Write([]byte(ISE500))
+					}
+
+					if cp.Cid != cid {
+						respondTemp("該当する提出がありません。")
 
 						return
-					}*/
+					}
 
+					SJQueue.Push(sm.Sid)
+
+					RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/management/")
 				} else {
 					cp, err := mainDB.ContestProblemFind2(cid, id)
 
@@ -662,20 +692,29 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 						if err.Error() == "Unknown problem" {
 							respondTemp("該当する問題がありません。")
 						} else {
+							HttpLog.Println(err)
+
 							rw.WriteHeader(http.StatusInternalServerError)
 							rw.Write([]byte(ISE500))
 						}
 						return
 					}
 
-					_, err = mainDB.SubmissionList(mainDB.db.Where("cid", "=", cid).And("pid", cp.Pid))
+					sml, err := mainDB.SubmissionList(mainDB.db.Where("pid", "=", cp.Pid))
 
 					if err != nil {
+						HttpLog.Println(err)
 						rw.WriteHeader(http.StatusInternalServerError)
 						rw.Write([]byte(ISE500))
 
 						return
 					}
+
+					for i := range *sml {
+						SJQueue.Push((*sml)[i].Sid)
+					}
+
+					RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/management/")
 				}
 
 				RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/")
@@ -715,7 +754,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				startStr := startDate + " " + startTime
 				finishStr := finishDate + " " + finishTime
 
-				if len(contestName) == 0 {
+				if len(contestName) == 0 || !UTF8StringLengthAndBOMCheck(contestName, 40) || strings.TrimSpace(contestName) == "" {
 					msg := "コンテスト名が不正です。"
 					templateVal := TemplateVal{
 						cid, std.UserID, &msg, startDate, startTime, finishDate, finishTime, description, contestName,
@@ -786,7 +825,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				err = mainDB.ContestDescriptionUpdate(cid, description)
 
 				if err != nil {
-					fmt.Println(err)
+		            HttpLog.Println(std.Iid, err)
 				}
 
 				RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/")
@@ -821,6 +860,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 					list, err := mainDB.ContestProblemList(cid)
 
 					if err != nil {
+						HttpLog.Println(err)
 						rw.WriteHeader(http.StatusInternalServerError)
 						rw.Write([]byte(ISE500))
 
@@ -835,6 +875,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 						cnt, err := mainDB.ContestProblemCount(cid)
 
 						if err != nil {
+							HttpLog.Println(err)
 							rw.WriteHeader(http.StatusInternalServerError)
 							rw.Write([]byte(ISE500))
 
@@ -908,6 +949,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 								return
 							} else {
+								HttpLog.Println(err)
 								rw.WriteHeader(http.StatusInternalServerError)
 								rw.Write([]byte(ISE500))
 
@@ -923,6 +965,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 							lid, checker, err := cp.LoadChecker()
 
 							if err != nil {
+								HttpLog.Println(err)
 								rw.WriteHeader(http.StatusInternalServerError)
 								rw.Write([]byte(ISE500))
 
@@ -932,6 +975,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 							stat, err := cp.LoadStatement()
 
 							if err != nil {
+								HttpLog.Println(err)
 								rw.WriteHeader(http.StatusInternalServerError)
 								rw.Write([]byte(ISE500))
 
@@ -965,9 +1009,9 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 						if len(name) == 0 || !UTF8StringLengthAndBOMCheck(name, 40) || strings.TrimSpace(name) == "" {
 							msg := "問題名が不正です。"
-							mode := true
+							mode := false
 							if upidx == -1 {
-								mode = false
+								mode = true
 							}
 							ceh.ManPro.Execute(rw, TemplateVal{cid, cont.Name, std.UserName, &msg, mode, pidx, name, time, mem, jtype, prob, lid, *languages, code})
 
@@ -981,6 +1025,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 								return
 							} else {
+								HttpLog.Println(err)
 								rw.WriteHeader(http.StatusInternalServerError)
 								rw.Write([]byte(ISE500))
 
@@ -1011,6 +1056,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 								return
 							} else {
+								HttpLog.Println(err)
 								rw.WriteHeader(http.StatusInternalServerError)
 								rw.Write([]byte(ISE500))
 
@@ -1021,6 +1067,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 						err = cp.UpdateStatement(prob)
 
 						if err != nil {
+							HttpLog.Println(err)
 							rw.WriteHeader(http.StatusInternalServerError)
 							rw.Write([]byte(ISE500))
 
@@ -1030,6 +1077,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 						err = cp.UpdateChecker(lid, code)
 
 						if err != nil {
+							HttpLog.Println(err)
 							rw.WriteHeader(http.StatusInternalServerError)
 							rw.Write([]byte(ISE500))
 
@@ -1078,6 +1126,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				cases, sets, err := cp.LoadTestCases()
 
 				if err != nil {
+					HttpLog.Println(err)
 					rw.WriteHeader(http.StatusInternalServerError)
 					rw.Write([]byte(ISE500))
 
@@ -1108,7 +1157,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 				cases := make([]TestCase, len(caseNames))
 				for i := range cases {
-					cases[i] = TestCase{caseNames[i], caseInputs[i], caseOutputs[i]}
+					cases[i] = TestCase{caseNames[i], ReplaceEndline(caseInputs[i]) , ReplaceEndline(caseOutputs[i])}
 				}
 				illegal := false
 
@@ -1155,6 +1204,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				err := cp.UpdateTestCases(cases, scores)
 
 				if err != nil {
+					HttpLog.Println(err)
 					rw.WriteHeader(http.StatusInternalServerError)
 					rw.Write([]byte(ISE500))
 
@@ -1168,11 +1218,6 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 				return			
 			}
-
-			
-
-			
-
 		} else {
 			rw.WriteHeader(http.StatusNotFound)
 

@@ -172,7 +172,7 @@ func (dm *DatabaseManager) ContestCount(options ...*genmai.Condition) (int64, er
 
     opt := make([]interface{}, len(options) + 2)
 
-    opt[0] = dm.db.Count()
+    opt[0] = dm.db.Count("cid")
     opt[1] = dm.db.From(&Contest{})
 
     for i := range options {

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ユーザ新規作成| popcon</title>
+    <!-- BootstrapのCSS読み込み -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- jQuery読み込み -->
+    <script src="/static/js/jquery-1.12.2.min.js"></script>
+    <!-- BootstrapのJS読み込み -->
+    <script src="/static/js/bootstrap.min.js"></script>
+    <!--footerFixed JS-->
+    <script src="/static/js/footer-fixed.js"></script>
+    {{if .ReCAPTCHA}}
+    <!--Google reCAPTCHA API-->
+    <script src="https://www.google.com/recaptcha/api.js"></script>
+    {{end}}
+    <style>
+        #footer {
+            text-align: center;
+            padding-bottom: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbarEexample">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="/">popcon</a>
+                </div>
+
+                <div class="collapse navbar-collapse" id="navbarEexample">
+                    <ul class="nav navbar-nav">
+                        <li><a href="/">トップ</a></li>
+                        <li><a href="/onlinejudge/">オンラインジャッジ</a></li>
+                        <li><a href="/contests/">コンテスト</a></li>
+                        <li><a href="/help">ヘルプ</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="contents">
+        <div class="container">
+            <div class="page-header">
+                <div class="row">
+                    <div class="col-xs-12 col-md-4 col-md-offset-2">
+     	                <h1>ユーザ新規作成</h1>
+                    </div>
+                </div>
+            </div>
+            {{with .Msg}}
+            <div class="row">
+                <div class="col-xs-12 col-md-8 col-md-offset-2">
+                    <div class="alert alert-danger" role="alert">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button>
+                        <string>Failed</strong> {{html .}}
+                    </div>
+                </div>
+            </div>
+            {{end}}
+            <form class="form-horizontal" method="post" action="/new_user">
+                <fieldset>
+                     <div class="row">
+                        <div class="col-xs-12 col-md-5 col-md-offset-2">
+                            <div class="control-group">
+                                <label class="control-label" for="user_id_input">ユーザID: </label>
+                                <div class="controls">
+                                    <input type="text" name="userID" class="form-control" id="user_id_input" placeholder="半角英数字、40字以内" value="{{html .UserID}}">
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="user_name_input">ユーザ名(40字以内): </label>
+                                <div class="controls">
+                                    <input type="text" name="userName" class="form-control" id="user_name_input" placeholder="40文字以内" value="{{html .UserName}}">
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="email_input">メールアドレス: </label>
+                                <div class="controls">
+                                    <input type="text" name="email" class="form-control" id="email_input" placeholder="40文字以内" value="{{html .Email}}">
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="password_input">パスワード: </label>
+                                <div class="controls">
+                                    <input type="password" name="password" class="form-control" id="password_input" placeholder="半角英数字、40文字以内" value="{{html .Password}}">
+                                </div>
+                            </div>
+
+                            {{if .ReCAPTCHA}}
+                                <div class="g-recaptcha" data-callback="syncerRecaptchaCallback" data-sitekey="{{html .ReCAPTCHASite}}"></div>
+                            {{end}}
+                        </div>
+                     </div>
+                    <div class="row">
+                        <div class="col-xs-12 col-md-5 col-md-offset-2">
+                            <div style="margin-top: 5px;" class="form-actions">
+                                <button type="submit" class="btn btn-primary">変更</button>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <div style="margin-top:10px;" class="container">
+            <footer class="container-fluid" id="footer">
+                <small>© 2016 Tsuzu</small>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>

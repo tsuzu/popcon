@@ -123,6 +123,7 @@
                     </tbody>
                 </table>
             </div>
+            {{if (ne .Submission.Status "WJ")}}
             {{with .Msg}}
             <div class="panel panel-default">
 	            <div class="panel-heading">
@@ -133,8 +134,8 @@
             {{end}}
 
             {{with .Cases}}
-            <div class="panel panel-default">
-                <h3>情報</h3>
+            <div>
+                <h3>テストケース</h3>
                 <table class="table">
                     <thead>
                         <tr>
@@ -150,27 +151,28 @@
                             <tr>
                                 <td>{{html .Name}}</td>
                                 <td>
-                                    {{if (eq .Status "AC")}}
+                                    {{if (eq .StatusString "AC")}}
                                         <span class="label label-success">AC</span> 
                                     {{else}}
-                                        {{if (eq .Status "IE")}}
+                                        {{if (eq .StatusString "IE")}}
                                             <span class="label label-danger">IE</span>
                                         {{else}}
-                                            {{if (eq .Status "MLE" "TLE" "CE" "RE" "WA")}}
-                                                <span class="label label-warning">{{.Status}}</span>
+                                            {{if (eq .StatusString "MLE" "TLE" "CE" "RE" "WA")}}
+                                                <span class="label label-warning">{{.StatusString}}</span>
                                             {{else}}
-                                      	        <span class="label label-default">{{.Status}}</span>
+                                      	        <span class="label label-default">{{.StatusString}}</span>
                                             {{end}}
                                         {{end}}
                                     {{end}}    
                                 </td>
-                                <td>{{.Time}}ms</td>
-                                <td>{{.Mem}}KB</td>
+                                <td>{{if (ne .Time -1)}}{{.Time}}ms{{else}}-{{end}}</td>
+                                <td>{{if (ne .Mem -1)}}{{.Mem}}KB{{else}}-{{end}}</td>
                             </tr>
                         {{end}}
                     </tbody>
                 </table>
             </div>
+            {{end}}
             {{end}}
         </div>
         <div style="margin-top:10px;" class="container">

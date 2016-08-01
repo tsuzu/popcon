@@ -3,6 +3,8 @@ package main
 import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/naoina/genmai"
+	"time"
+//	"os"
 )
 
 // Shared in all codes
@@ -29,7 +31,10 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 		return nil, err
 	}
 
+	dm.db.DB().SetConnMaxLifetime(3 * time.Minute)
 	dm.db.DB().SetMaxIdleConns(150)
+	dm.db.DB().SetMaxOpenConns(150)
+	//dm.db.SetLogOutput(os.Stdout)
 
 	err = dm.db.DB().Ping()
 

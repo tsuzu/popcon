@@ -5,7 +5,6 @@ import "github.com/naoina/genmai"
 import "time"
 import "text/template"
 import "strconv"
-import "fmt"
 import "errors"
 import "net/url"
 import "strings"
@@ -73,6 +72,14 @@ func (ch ContestsTopHandler) newContestHandler(rw http.ResponseWriter, req *http
             FinishTime string
             Description string
             ContestName string
+    }
+
+    if !settings.AddUser && std.Gid != 0 {
+        rw.WriteHeader(http.StatusForbidden)
+
+        rw.Write([]byte(FBD403))
+
+        return
     }
 
     if req.Method == "POST" {
@@ -152,6 +159,7 @@ func (ch ContestsTopHandler) newContestHandler(rw http.ResponseWriter, req *http
             
                 return
             }else {
+                HttpLog.Println(err)
                 rw.WriteHeader(http.StatusInternalServerError)
                 rw.Write([]byte(ISE500))
 
@@ -162,7 +170,7 @@ func (ch ContestsTopHandler) newContestHandler(rw http.ResponseWriter, req *http
         err = mainDB.ContestDescriptionUpdate(cid, description)
 
         if err != nil {
-            fmt.Println(err)
+            HttpLog.Println(std.Iid, err)
         }
 
         RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/")
@@ -270,8 +278,7 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
     count, err := mainDB.ContestCount(cond)
 
     if err != nil {
-        //TODO 
-        fmt.Println(err) //logに変更
+        HttpLog.Println(std.Iid, err)
         return
     }
 
@@ -282,11 +289,13 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
         Current int
         MaxPage int
         Pagination []PaginationHelper
+        CanCreateContest bool
     }
     var templateVal TemplateVal
     templateVal.UserName = std.UserName
     templateVal.Type = reqType
     templateVal.Current = 1
+    templateVal.CanCreateContest = (settings.CreateContest || std.Gid == 0)
 
     templateVal.MaxPage = int(count) / ContentsPerPage
 
@@ -308,7 +317,7 @@ func (ch ContestsTopHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
         if err == nil {
             templateVal.Contests = *contests
         }else {
-            fmt.Println(err)
+            HttpLog.Println(std.Iid, err)
         }
     }
 
