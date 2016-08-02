@@ -83,7 +83,7 @@
             </div>
         </div>
         {{end}}
-        <form class="form-horizontal" method="post" action="/contests/{{.Cid}}/management/testcases/{{.Pidx}}">
+        <form class="form-horizontal" method="post" enctype="multipart/form-data" action="/contests/{{.Cid}}/management/testcases/{{.Pidx}}">
             <fieldset>
                 <div class="row">
                     <div class="col-xs-12 col-md-8 col-md-offset-2">
@@ -106,8 +106,10 @@
                                 <div>
                                     <label>入出力: </label>
                                     <div class="form-inline" style="font-size: 0">
-                                        <textarea name="case_input[]" class="io_textarea form-control input-xlarge" rows="5">{{html $elm.Input}}</textarea>
-                                        <textarea name="case_output[]" class="io_textarea form-control input-xlarge" rows="5">{{html $elm.Output}}</textarea>
+                                        <!--<textarea name="case_input[]" class="io_textarea form-control input-xlarge" rows="5">{{html $elm.Input}}</textarea>
+                                        <textarea name="case_output[]" class="io_textarea form-control input-xlarge" rows="5">{{html $elm.Output}}</textarea>-->
+                                        <input type="file" name="case_input[]" class="id_p form-control" />
+                                        <input type="file" name="csae_output[]" class="id_p form-control"/>
                                     </div>
                                 </div>
                             </div>

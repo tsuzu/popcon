@@ -210,8 +210,8 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
                 for i := range *sets {
                     ac := true
 
-                    for i := range (*sets)[i].Cases {
-                        c := (*sets)[i].Cases[i]
+                    for j := range (*sets)[i].Cases {
+                        c := (*sets)[i].Cases[j]
 
                         if tc, has := (*cases)[c]; !has || tc.Status != Accepted {
                             ac = false
