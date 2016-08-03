@@ -79,3 +79,17 @@ The service is not implemented.
 </body>
 </html>
 `
+const RETL413 = `
+<!DOCTYPE html>
+<html>
+<head>
+<title>
+413 Request Entity Too Large
+</title>
+</head>
+<body>
+<h1>Request Entity Too Large</h1>
+Your file is too large.(<=10MB)
+</body>
+</html>
+`

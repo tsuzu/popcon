@@ -20,6 +20,14 @@
             padding-bottom: 15px;
         }
         
+        @media (min-width: 768px) {
+            .io_textarea {
+                width: 50% !important;
+                box-sizing: border-box;
+            }
+            .io_col_sm_6 {}
+        }
+        
         .id_p {
             display: inline;
             zoom: 1;
@@ -79,32 +87,31 @@
             <fieldset>
                 <div class="row">
                     <div class="col-xs-12 col-md-8 col-md-offset-2">
-                        <legend>テストケース(新規ケースは一度変更を押すと内容を登録できます。)</legend>
-                        <div>
-                            <table class="table" id="testcases_table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>名前</th>
-                                    <th>入出力</th>
-                                </tr>
-                            </thead>
-
-                            <tbody  id="testcases_area">
-                                    {{$top := .}}
-                                    {{range $idx, $elm := .Testcases}}
-                                    <tr>
-                                        <td>{{$idx}}</td>
-                                        <td>
-                                            <input type="text" name="case_name[]" style="width:100%;" class="form-control" placeholder="40文字以内" value="{{html $elm}}">
-                                        </td>
-                                        <td>
-                                            <button type="button" class="btn btn-default id_p" onclick="window.open('/contests/{{$top.Cid}}/management/testcases/{{$.Pidx}}/{{$idx}}')">設定</button>
-                                        </td>
-                                    </tr>
-                                    {{end}}
-                            </tbody>
-                            </table>
+                        <legend>テストケース(コードチェックの場合出力は空欄)</legend>
+                        <div id="testcases_area">
+                            {{range $idx, $elm := .Testcases}}
+                            <div class="testcase" style="margin-top: 10px;">
+                                <div class="form-inline">
+                                    <div class="row">
+                                        <div class="col-sm-2">
+                                            <label>ID: &nbsp;</label>
+                                            <p class="id_p form-control-static">{{$idx}}</p>
+                                        </div>
+                                        <label class="col-sm-2 control-label">名前: </label>
+                                        <div class="col-sm-8">
+                                            <input type="text" name="case_name[]" style="width:100%;" class="form-control" placeholder="40文字以内" value="{{html $elm.Name}}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label>入出力: </label>
+                                    <div class="form-inline" style="font-size: 0">
+                                        <textarea name="case_input[]" class="io_textarea form-control input-xlarge" rows="5">{{html $elm.Input}}</textarea>
+                                        <textarea name="case_output[]" class="io_textarea form-control input-xlarge" rows="5">{{html $elm.Output}}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            {{end}}
                         </div>
                         <div style="margin-top: 5px;">
                             <button type="button" class="btn btn-default" id="testcase_add">追加</button>
@@ -134,13 +141,18 @@
                         </table>
                         <div style="margin-top: 5px;">
                             <button type="button" class="btn btn-default" id="scoreset_add">追加</button>
-                            <button type="button" class="btn btn-default id_p" id="scoreset_remove">削除</button>
+                            <button type="button" class="btn btn-default" class="id_p" id="scoreset_remove">削除</button>
                         </div>
                         <button style="margin-top: 20px;" type="submit" class="btn btn-primary">変更</button>
                     </div>
                 </div>
             </fieldset>
         </form>
+        <div class="row">
+            <div class="col-xs-12 col-md-8 col-md-offset-2" style="margin-top: 5px;">
+
+            </div>
+        </div>
     </div>
     <footer class="container-fluid" id="footer">
         <small>© 2016 Tsuzu</small>
@@ -148,15 +160,27 @@
     <script>
         $(function(){
             testcase_form_create = function(id) {
-                return `<tr>
-                	<td>` + id + `</td>
-                    <td>
-                	    <input type="text" name="case_name[]" style="width:100%;" class="form-control" placeholder="40文字以内" value="">
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-default" disabled>設定</button>
-                    </td>
-                </tr>`;
+                return `<div class="testcase" style="margin-top: 10px;">
+                                <div class="form-inline">
+                                    <div class="row">
+                                        <div class="col-sm-2">
+                                            <label>ID: &nbsp;</label>
+                                            <p class="id_p form-control-static">` + id + `</p>
+                                        </div>
+                                        <label class="col-sm-2 control-label">名前: </label>
+                                        <div class="col-sm-8">
+                                            <input type="text" name="case_name[]" style="width:100%;" class="form-control" placeholder="40文字以内" value="">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label>入出力: </label>
+                                    <div class="form-inline" style="font-size: 0">
+                                        <textarea name="case_input[]" class="io_textarea form-control input-xlarge" rows="5"></textarea>
+                                        <textarea name="case_output[]" class="io_textarea form-control input-xlarge" rows="5"></textarea>
+                                    </div>
+                                </div>
+                            </div>`;
             }
 
             scoreset_form = `
@@ -176,10 +200,6 @@
             }else {
                 $("#testcase_remove").show();
             }
-
-            $(".file-button").click(function(){
-                $(this).next("input")
-            })
             
             $("#testcase_add").click(function(){
                 $("#testcases_area").append(testcase_form_create($("#testcases_area>*").length));

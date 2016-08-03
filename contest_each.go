@@ -10,6 +10,7 @@ import (
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday"
+	"io/ioutil"
 )
 
 type ContestEachHandler struct {
@@ -25,6 +26,7 @@ type ContestEachHandler struct {
 	ManPro   *template.Template
 	ManProV  *template.Template
 	ManTc    *template.Template
+	ManTcV   *template.Template
 }
 
 func (ceh *ContestEachHandler) checkAdmin(cont *Contest, std SessionTemplateData) bool {
@@ -1097,7 +1099,9 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				}
 			})).ServeHTTP(rw, req)
 		} else if len(req.URL.Path) >= 11 && req.URL.Path[:10] == "testcases/" {
-			pidx, err := strconv.ParseInt(req.URL.Path[10:], 10, 64)
+			arr := strings.Split(req.URL.Path[10:], "/")
+
+			pidx, err := strconv.ParseInt(arr[0], 10, 64)
 
 			if err != nil {
 				rw.WriteHeader(http.StatusNotFound)
@@ -1115,112 +1119,270 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				return
 			}
 
-			type TemplateVal struct {
-				Cid         int64
-				Pidx        int64
-				ContestName string
-				UserName    string
-				Testcases   []TestCase
-				Scoresets   []ScoreSet
-				Msg         *string
-			}
-
-			if req.Method == "GET" {
-				cases, sets, err := cp.LoadTestCases()
-
-				if err != nil {
-					HttpLog.Println(err)
-					rw.WriteHeader(http.StatusInternalServerError)
-					rw.Write([]byte(ISE500))
-
-					return
+			if len(arr) == 1 {
+				type TemplateVal struct {
+					Cid         int64
+					Pidx        int64
+					ContestName string
+					UserName    string
+					Testcases   []string
+					Scoresets   []ScoreSet
+					Msg         *string
 				}
 
-				ceh.ManTc.Execute(rw, TemplateVal{cid, pidx, cont.Name, std.UserName, *cases, *sets, nil})
-			} else if req.Method == "POST" {
-				caseNames := req.Form["case_name[]"]
-				caseInputs := req.Form["case_input[]"]
-				caseOutputs := req.Form["case_output[]"]
-				setScores := req.Form["set_score[]"]
-				setCases := req.Form["set_case[]"]
+				if req.Method == "GET" {
+					cases, sets, err := cp.LoadTestCaseNames()
 
-				if !(len(caseNames) == len(caseInputs) && len(caseNames) == len(caseOutputs)) || len(caseNames) > 50 {
-					rw.WriteHeader(http.StatusBadRequest)
-					rw.Write([]byte(BR400))
+					if err != nil {
+						HttpLog.Println(err)
+						rw.WriteHeader(http.StatusInternalServerError)
+						rw.Write([]byte(ISE500))
 
-					return
-				}
+						return
+					}
 
-				if len(setScores) != len(setCases) || len(setScores) > 50 {
-					rw.WriteHeader(http.StatusBadRequest)
-					rw.Write([]byte(BR400))
+					ceh.ManTc.Execute(rw, TemplateVal{cid, pidx, cont.Name, std.UserName, *cases, *sets, nil})
+				} else if req.Method == "POST" {
+					caseNames := req.Form["case_name[]"]
+					setScores := req.Form["set_score[]"]
+					setCases := req.Form["set_case[]"]
 
-					return
-				}
+					if len(caseNames) > 50 {
+						rw.WriteHeader(http.StatusBadRequest)
+						rw.Write([]byte(BR400))
 
-				cases := make([]TestCase, len(caseNames))
-				for i := range cases {
-					cases[i] = TestCase{caseNames[i], ReplaceEndline(caseInputs[i]), ReplaceEndline(caseOutputs[i])}
-				}
-				illegal := false
+						return
+					}
 
-				scores := make([]ScoreSet, len(setScores))
-				for i := range scores {
-					caseIds := make([]int, 0, 50)
-					for _, str := range strings.Split(setCases[i], ",") {
-						str = strings.TrimSpace(str)
+					if len(setScores) != len(setCases) || len(setScores) > 50 {
+						rw.WriteHeader(http.StatusBadRequest)
+						rw.Write([]byte(BR400))
 
-						id, err := strconv.ParseInt(str, 10, 32)
+						return
+					}
+
+					cases := make([]string, len(caseNames))
+					for i := range cases {
+						cases[i] = caseNames[i]
+					}
+					illegal := false
+
+					scores := make([]ScoreSet, len(setScores))
+					for i := range scores {
+						caseIds := make([]int, 0, 50)
+						for _, str := range strings.Split(setCases[i], ",") {
+							str = strings.TrimSpace(str)
+
+							id, err := strconv.ParseInt(str, 10, 32)
+
+							if err != nil {
+								illegal = true
+							}
+
+							if id < 0 || int(id) >= len(cases) {
+								illegal = true
+							}
+
+							caseIds = append(caseIds, int(id))
+						}
+
+						score, err := strconv.ParseInt(setScores[i], 10, 32)
 
 						if err != nil {
 							illegal = true
 						}
 
-						if id < 0 || int(id) >= len(cases) {
+						if score < 10 || score > 2000 {
 							illegal = true
 						}
 
-						caseIds = append(caseIds, int(id))
+						scores[i] = ScoreSet{caseIds, int(score)}
 					}
 
-					score, err := strconv.ParseInt(setScores[i], 10, 32)
+					if illegal {
+						msg := "不正なパラメータがあります。"
+
+						ceh.ManTc.Execute(rw, TemplateVal{cid, pidx, cont.Name, std.UserName, cases, scores, &msg})
+
+						return
+					}
+
+					err := cp.UpdateTestCaseNames(cases, scores)
 
 					if err != nil {
-						illegal = true
+						HttpLog.Println(err)
+						rw.WriteHeader(http.StatusInternalServerError)
+						rw.Write([]byte(ISE500))
+
+						return
 					}
 
-					if score < 10 || score > 2000 {
-						illegal = true
-					}
-
-					scores[i] = ScoreSet{caseIds, int(score)}
-				}
-
-				if illegal {
-					msg := "不正なパラメータがあります。"
-
-					ceh.ManTc.Execute(rw, TemplateVal{cid, pidx, cont.Name, std.UserName, cases, scores, &msg})
+					RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/testcases/" + strconv.FormatInt(pidx, 10))
+				} else {
+					rw.WriteHeader(http.StatusBadRequest)
+					rw.Write([]byte(BR400))
 
 					return
 				}
-
-				err := cp.UpdateTestCases(cases, scores)
+			} else if len(arr) >= 2 {
+				tcid, err := strconv.ParseInt(arr[1], 10, 32)
 
 				if err != nil {
-					HttpLog.Println(err)
-					rw.WriteHeader(http.StatusInternalServerError)
-					rw.Write([]byte(ISE500))
+					rw.WriteHeader(http.StatusNotFound)
+					rw.Write([]byte(NF404))
 
 					return
 				}
 
-				RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/problems/")
-			} else {
-				rw.WriteHeader(http.StatusBadRequest)
-				rw.Write([]byte(BR400))
+				if len(arr) == 2 {
 
-				return
+					in, out, err := cp.LoadTestCaseInfo(int(tcid))
+
+					if err != nil {
+						DBLog.Println(err)
+
+						rw.WriteHeader(http.StatusNotFound)
+						rw.Write([]byte(NF404))
+
+						return
+					}
+
+					type TemplateVal struct {
+						Cid                     int64
+						Id                      int
+						UserName                string
+						Pidx                    int64
+						ProbName                string
+						InCapacity, OutCapacity int64
+					}
+
+					templateVal := TemplateVal{
+						cid,
+						int(tcid),
+						std.UserName,
+						pidx,
+						cp.Name,
+						in, out,
+					}
+
+					ceh.ManTcV.Execute(rw, templateVal)
+				}else if len(arr) == 3 {
+					if req.Method == "POST" {
+						err:= req.ParseMultipartForm(10 * 1024 * 1024)
+
+						if err != nil {
+							rw.WriteHeader(http.StatusBadRequest)
+							rw.Write([]byte(BR400))
+
+							return
+						}
+
+						file, _, err := req.FormFile("file")
+						
+						if err != nil {
+							rw.WriteHeader(http.StatusBadRequest)
+							rw.Write([]byte(BR400))
+
+							return
+						}
+						l, err := file.Seek(0, 2)
+
+						if err != nil{
+							rw.WriteHeader(http.StatusBadRequest)
+							rw.Write([]byte(BR400))
+
+							return
+						}else if l > 20 * 1024 * 1024 {
+							rw.WriteHeader(http.StatusRequestEntityTooLarge)
+							rw.Write([]byte(RETL413))
+
+							return
+						}
+
+						file.Seek(0, 0)
+
+						defer file.Close()
+
+						b, err := ioutil.ReadAll(file)
+
+						if err != nil {
+							rw.WriteHeader(http.StatusBadRequest)
+							rw.Write([]byte(BR400))
+
+							return
+						}
+
+						if arr[2] == "input" {
+							err = cp.UpdateTestCase(true, int(tcid), ReplaceEndline(string(b)))
+						}else if arr[2] == "output"{
+							err = cp.UpdateTestCase(false, int(tcid), ReplaceEndline(string(b)))
+						}else {
+							rw.WriteHeader(http.StatusNotFound)
+							rw.Write([]byte(NF404))
+
+							return
+						}
+
+						if err != nil {
+							DBLog.Println(err)
+
+							rw.WriteHeader(http.StatusNotFound)
+							rw.Write([]byte(NF404))
+
+							return
+						}
+
+						RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/management/testcases/" + strconv.FormatInt(pidx, 10) + "/" + strconv.FormatInt(int64(tcid), 10))
+					}else if req.Method == "GET" {
+						var str string
+						var err error
+
+						if arr[2] == "input" {
+							str, err = cp.LoadTestCase(true, int(tcid))
+						}else if arr[2] == "output"{
+							str, err = cp.LoadTestCase(false, int(tcid))
+						}else {
+							rw.WriteHeader(http.StatusNotFound)
+							rw.Write([]byte(NF404))
+
+							return
+						}
+
+						if err != nil {
+							rw.WriteHeader(http.StatusNotFound)
+							rw.Write([]byte(NF404))
+
+							return
+						}
+
+						fileName := strconv.FormatInt(cid, 10) + "-" + strconv.FormatInt(pidx, 10) + "_" + strconv.FormatInt(int64(tcid), 10)
+
+						if arr[2] == "input" {
+							fileName += "_in.txt"
+						}else {
+							fileName += "_out.txt"
+						}
+
+						rw.Header()["X-Content-Type-Options"] = []string{"nosniff"}
+						rw.Header()["Content-Type"] = []string{"text/plain; charset=UTF-8"}
+						rw.Header()["Content-Disposition"] = []string{"attachment; filename=\"" + fileName + "\""}
+
+						rw.WriteHeader(http.StatusOK)
+						rw.Write([]byte(str))
+					}else {
+						rw.WriteHeader(http.StatusNotFound)
+						rw.Write([]byte(NF404))
+
+						return
+					}
+				}else {
+					rw.WriteHeader(http.StatusBadRequest)
+					rw.Write([]byte(BR400))
+
+					return
+				}
 			}
+
 		} else {
 			rw.WriteHeader(http.StatusNotFound)
 
@@ -1321,5 +1483,11 @@ func CreateContestEachHandler() (*ContestEachHandler, error) {
 		return nil, err
 	}
 
-	return &ContestEachHandler{top.Lookup("index_tmpl.html"), probList, probView, subList.Lookup("submissions_tmpl.html"), subView.Lookup("submission_view_tmpl.html"), submit, man, manre, manse.Lookup("setting_tmpl.html"), manpr, manprv, mantc}, nil
+	mantcv, err := template.ParseFiles("./html/contests/each/management/testcase_each_tmpl.html")
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ContestEachHandler{top.Lookup("index_tmpl.html"), probList, probView, subList.Lookup("submissions_tmpl.html"), subView.Lookup("submission_view_tmpl.html"), submit, man, manre, manse.Lookup("setting_tmpl.html"), manpr, manprv, mantc, mantcv}, nil
 }

@@ -80,7 +80,6 @@
                                     <label class="control-label" for="language_select">言語: </label>
                                     <div class="controls">
                                         <select name="lang" class="form-control input-sm" id="language_select">
-		                                    <option value="-1">-</option>
                                             {{range .Languages}}
                                                 <option value="{{.Lid}}">{{html .Name}}</option>
                                             {{end}}
