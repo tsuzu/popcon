@@ -65,7 +65,6 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 
         go func(nj int) {
-            HttpLog.Println(nj)
 			for i := 0; i < nj; {
 				sid := SJQueue.Pop()
 
@@ -141,8 +140,6 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 					break
 				}
-                HttpLog.Println("sent")
-
 				i++
 			}
 		}(tr.NewJudge)
