@@ -11,6 +11,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday"
 	"io/ioutil"
+	"fmt"
 )
 
 type ContestEachHandler struct {
@@ -27,6 +28,7 @@ type ContestEachHandler struct {
 	ManProV  *template.Template
 	ManTc    *template.Template
 	ManTcV   *template.Template
+	Ranking  *template.Template
 }
 
 func (ceh *ContestEachHandler) checkAdmin(cont *Contest, std SessionTemplateData) bool {
@@ -195,6 +197,116 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 		})).ServeHTTP(rw, req)
 	})
 
+	mux.Handle("/ranking", http.StripPrefix("/ranking", http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		if !free {
+			RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/")
+
+			return
+		}
+
+		wrapForm := func(str string) int64 {
+			arr, has := req.Form[str]
+			if has && len(arr) != 0 {
+				val, err := strconv.ParseInt(arr[0], 10, 64)
+
+				if err != nil {
+					return 1
+				} else {
+					return val
+				}
+			}
+			return 1
+		}
+
+		page := int(wrapForm("p"))
+
+		type RankingRow2 struct {
+			RankingRow
+			Rank int
+		}
+
+		type TemplateVal struct {
+			ContestName string
+			Cid int64
+			UserName string
+			Problems []ContestProblem
+			Ranking []RankingRow2
+			Current int
+			MaxPage int
+			BeginTime int64
+			Pagination []PaginationHelper
+		}
+
+		if page == -1 {
+			page = 1
+		}
+		count, err := mainDB.ContestRankingCount(cid)
+
+		if err != nil {
+			HttpLog.Println(std.Iid, err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			rw.Write([]byte(ISE500))
+
+			return
+		}
+
+		var templateVal TemplateVal
+		templateVal.Cid = cid
+		templateVal.ContestName = cont.Name
+		templateVal.UserName = std.UserName
+		templateVal.BeginTime = cont.StartTime
+		probs, err := mainDB.ContestProblemList(cid)
+
+		if err != nil {
+			HttpLog.Println(std.Iid, err)
+			rw.WriteHeader(http.StatusInternalServerError)
+			rw.Write([]byte(ISE500))
+
+			return
+		}
+		templateVal.Problems = *probs
+
+
+		templateVal.Current = 1
+
+		templateVal.MaxPage = int(count) / ContentsPerPage
+
+		if int(count)%ContentsPerPage != 0 {
+			templateVal.MaxPage++
+		} else if templateVal.MaxPage == 0 {
+			templateVal.MaxPage = 1
+		}
+
+		if count > 0 {
+			if (page-1)*ContentsPerPage > int(count) {
+				page = 1
+			}
+
+			templateVal.Current = page
+
+			ranks, err := mainDB.ContestRankingList(cid, int64((page-1)*ContentsPerPage), ContentsPerPage)
+
+			if err != nil {
+				DBLog.Println(err)
+
+				rw.WriteHeader(http.StatusInternalServerError)
+				rw.Write([]byte(ISE500))
+
+				return
+			}
+
+			ranks2 := make([]RankingRow2, len(*ranks))
+
+			for i := range *ranks {
+				ranks2[i] = RankingRow2{(*ranks)[i], (page - 1)*ContentsPerPage + i + 1}
+			}
+		}
+
+		templateVal.Pagination = CreatePaginationHelper(templateVal.Current, templateVal.MaxPage, 3)
+
+		ceh.Ranking.Execute(rw, templateVal)
+	})))
+
 	mux.Handle("/submissions/", http.StripPrefix("/submissions/", http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		if !free {
 			RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/")
@@ -265,6 +377,8 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			count, err := mainDB.SubmissionViewCount(cid, iid, lang, prob, stat)
 
 			if err != nil {
+				rw.WriteHeader(http.StatusInternalServerError)
+				rw.Write([]byte(ISE500))
 				HttpLog.Println(std.Iid, err)
 
 				return
@@ -1423,6 +1537,15 @@ func CreateContestEachHandler() (*ContestEachHandler, error) {
 	funcMap = template.FuncMap{
 		"timeToString": TimeToString,
 		"add":          func(x, y int) int { return x + y },
+		"timeRangeConv": func(x, y int64) string {
+			str := fmt.Sprintf("%02d", (y - x) / 60) + ":" + fmt.Sprintf("%02d", y - x)
+
+			if (y - x) / 3600 != 0 {
+				str = fmt.Sprintf("%02d", (y - x) / 3600) + ":" + str
+			}
+			
+			return str
+		},
 	}
 
 	subList, err := template.New("").Funcs(funcMap).ParseFiles("./html/contests/each/submissions_tmpl.html")
@@ -1450,6 +1573,12 @@ func CreateContestEachHandler() (*ContestEachHandler, error) {
 	}
 
 	manre, err := template.ParseFiles("./html/contests/each/management/rejudge_tmpl.html")
+
+	if err != nil {
+		return nil, err
+	}
+
+	rank, err := template.New("").Funcs(funcMap).ParseFiles("./html/contests/each/ranking_tmpl.html")
 
 	if err != nil {
 		return nil, err
@@ -1489,5 +1618,5 @@ func CreateContestEachHandler() (*ContestEachHandler, error) {
 		return nil, err
 	}
 
-	return &ContestEachHandler{top.Lookup("index_tmpl.html"), probList, probView, subList.Lookup("submissions_tmpl.html"), subView.Lookup("submission_view_tmpl.html"), submit, man, manre, manse.Lookup("setting_tmpl.html"), manpr, manprv, mantc, mantcv}, nil
+	return &ContestEachHandler{top.Lookup("index_tmpl.html"), probList, probView, subList.Lookup("submissions_tmpl.html"), subView.Lookup("submission_view_tmpl.html"), submit, man, manre, manse.Lookup("setting_tmpl.html"), manpr, manprv, mantc, mantcv, rank.Lookup("ranking_tmpl.html")}, nil
 }

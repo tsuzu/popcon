@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+{{$top := .}}
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{html .ContestName}} Submissions| popcon</title>
+    <!--Bootstrap CSS-->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!--jQuery-->
+    <script src="/static/js/jquery-1.12.2.min.js"></script>
+    <!--Bootstrap JS-->
+    <script src="/static/js/bootstrap.min.js"></script>
+    <!--footerFixed JS-->
+    <script src="/static/js/footer-fixed.js"></script>
+    <style>
+        #footer {
+            text-align: center;
+            padding-bottom: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav class="navbar navbar-default">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbarEexample">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="/">popcon</a>
+                </div>
+
+                <div class="collapse navbar-collapse" id="navbarEexample">
+                    <ul class="nav navbar-nav">
+                        <li><a href="/contests/{{.Cid}}/">コンテストトップ</a></li>
+                        <li><a href="/contests/{{.Cid}}/problems/">問題一覧</a></li>
+                        <li><a href="/contests/{{.Cid}}/submissions/">提出一覧</a></li>
+                        <li class="active"><a href="/contests/{{.Cid}}/ranking">ランキング</a></li>
+                        <p class="navbar-text"><a href="/contests/">コンテスト一覧へ</a></p>
+                    </ul>
+                    <div class="navbar-right">
+                        <p class="navbar-text">User: <a href="/userinfo">{{html .UserName}}</a></p>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="contents">
+        <div class="container">
+            <div class="page-header">
+                <h1>ランキング</h1>
+            </div>
+
+            <div style="margin-top:5px;" class="panel panel-default">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>順位</th>
+                            <th>ユーザ名</th>
+                            {{range .Problems}}
+                                <th>{{.Pidx}} - {{html .Name}}</th>
+                            {{end}}
+                            <th>計</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {{$top := .}}
+                        {{$r := range .Ranking}}
+                        <tr>
+                            <td>{{$r.Rank}}</td>
+                            <td><a href="/contests/{{$top.Cid}}/submissions/?user={{urlquery $r.Uid}}">{{html $r.UserName}}</a></td>
+                            {{$p := range $top.Problems}}
+                                <td><p>{{with (index $r.Probs $p.Pid)}}{{.Score}}</p><p>{{timeRangeConv $top.BeginTime .Time}}{{else}}0</p><p>00:00{{end}}</p></td>
+                            {{end}}
+                            <td><p>{{$r.Score}}</p><p>{{$r.Time}}</p></td>
+                        </tr>
+                        {{else}}
+                        <tr>
+                            <td>提出がありません。</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="text-align: center;">
+                <ul class="pagination">
+                    {{if ne .Current 1}}
+                    <li>
+                        <a href="/contests/{{$top.Cid}}/ranking?p={{add .Current -1}}" aria-label="前のページへ">
+                            <span aria-hidden="true">«</span>
+                        </a>
+                    </li>
+                    {{end}}
+                    {{range $page := .Pagination}}
+                        {{if (eq $page.Page -1)}}
+                            <li class="disabled"><a href="/contests/{{$top.Cid}}/ranking?p={{$page.Page}}">...</a></li>
+                        {{else}}
+                            <li {{if $page.IsActive}}class="active" {{end}}>
+                                <a href="/contests/{{$top.Cid}}/ranking?p={{$page.Page}}">{{$page.Page}}</a>
+                            </li>
+                        {{end}}
+                    {{end}}
+                    {{if ne .Current .MaxPage}}
+                        <li>
+                            <a href="/contests/{{$top.Cid}}/ranking?p={{add .Current 1}}" aria-label="次のページへ">
+                            <span aria-hidden="true">»</span>
+                        </a>
+                    </li>
+                    {{end}}
+                </ul>
+            </div>
+        </div>
+        <div style="margin-top:10px;" class="container">
+            <footer class="container-fluid" id="footer">
+                <small>© 2016 Tsuzu</small>
+            </footer>
+        </div>
+    </div>
+</body>
+
+</html>

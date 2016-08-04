@@ -64,7 +64,7 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			break
 		}
 
-        go func(nj int) {
+		go func(nj int) {
 			for i := 0; i < nj; {
 				sid := SJQueue.Pop()
 
@@ -184,56 +184,58 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 					}
 				}
 			} else {
-                sm, err := mainDB.SubmissionFind(tr.Resp.Sid)
+				sm, err := mainDB.SubmissionFind(tr.Resp.Sid)
 
-                if err != nil {
-                    DBLog.Println(err)
+				if err != nil {
+					DBLog.Println(err)
 
-                    return
-                }
+					return
+				}
 
-                cases, err := mainDB.SubmissionGetCase(tr.Resp.Sid)
-                score := 0
+				cases, err := mainDB.SubmissionGetCase(tr.Resp.Sid)
+				score := 0
 
-                if err != nil {
-                    DBLog.Println(err)
+				if err != nil {
+					DBLog.Println(err)
 
-                    return
-                }
-                _, sets, err := (&ContestProblem{Pid: sm.Pid}).LoadTestCases()
+					return
+				}
+				if tr.Resp.Status != CompileError {
+					_, sets, err := (&ContestProblem{Pid: sm.Pid}).LoadTestCases()
 
-                if err != nil {
-                    DBLog.Println(err)
-                }
+					if err != nil {
+						DBLog.Println(err)
+					}
 
-                tcerr := false
-                for i := range *sets {
-                    ac := true
+					tcerr := false
+					for i := range *sets {
+						ac := true
 
-                    if i < len(*sets) {
-                        for j := range (*sets)[i].Cases {
-                            c := (*sets)[i].Cases[j]
+						if i < len(*sets) {
+							for j := range (*sets)[i].Cases {
+								c := (*sets)[i].Cases[j]
 
-                            if tc, has := (*cases)[c]; !has {
-                                tcerr = true
-                                ac = false
-                            }else if tc.Status != Accepted {
-                                ac = false
-                            }
-                        }
-                    }else {
-                        ac = false
-                        tcerr = true
-                    }
+								if tc, has := (*cases)[c]; !has {
+									tcerr = true
+									ac = false
+								} else if tc.Status != Accepted {
+									ac = false
+								}
+							}
+						} else {
+							ac = false
+							tcerr = true
+						}
 
-                    if ac {
-                        score += (*sets)[i].Score
-                    }
-                }
+						if ac {
+							score += (*sets)[i].Score
+						}
+					}
 
-                if tcerr {
-                    tr.Resp.Msg += "\r\nテストケース情報にエラーが発生しました。"
-                }
+					if tcerr {
+						tr.Resp.Msg += "\r\nテストケース情報にエラーが発生しました。"
+					}
+				}
 
 				err = mainDB.SubmissionUpdate(tr.Resp.Sid, tr.Resp.Time, tr.Resp.Mem, tr.Resp.Status, 0, 0, int64(score))
 
