@@ -1,5 +1,9 @@
 package main
 
+import (
+	"encoding/json"
+)
+
 type ContestParticipation struct {
 	Iid     int64  `default:""`
 	Cid     int64  `default:""`
@@ -92,5 +96,10 @@ func (dm *DatabaseManager) ContestRankingUpdate(iid, cid int64, pid int64, sm Su
         panic(err)
     }
 
-//    var detMap
+    var detStrMap map[string]RankingHighScoreData
+
+	err := json.Unmarshal(details, &detStrMap)
+
+	
+
 }
