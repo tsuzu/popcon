@@ -446,7 +446,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 	})))
 
 	mux.HandleFunc("/join", func(rw http.ResponseWriter, req *http.Request) {
-		if req.Method == "GET" {
+		if req.Method == "GET" && !isAdmin {
 			mainDB.ContestParticipationAdd(std.Iid, cid)
 
 			RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/")

@@ -4,7 +4,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/naoina/genmai"
 	"time"
-//	"os"
+	//	"os"
 )
 
 // Shared in all codes
@@ -14,7 +14,7 @@ var mainDB *DatabaseManager
 type DatabaseManager struct {
 	db *genmai.DB
 	//db *sql.DB
-    showedNewCount int
+	showedNewCount int
 }
 
 // NewDatabaseManager is a function to initialize database connections
@@ -22,10 +22,10 @@ type DatabaseManager struct {
 func NewDatabaseManager() (*DatabaseManager, error) {
 	dm := &DatabaseManager{}
 	var err error
-	
+
 	// pcpjudge Database
 	dm.db, err = genmai.New(&genmai.MySQLDialect{}, settings.DB)
-//	dm.db, err = sql.Open("mysql", "popcon:password@/popcon") // Should change password
+	//	dm.db, err = sql.Open("mysql", "popcon:password@/popcon") // Should change password
 
 	if err != nil {
 		return nil, err
@@ -60,47 +60,47 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 	if err != nil {
 		return nil, err
 	}
-    
-    // user_and_group.go
+
+	// user_and_group.go
 	err = dm.CreateGroupTable()
-    //_, err = dm.db.Exec("create table if not exists groups (groupID int(11) auto_increment primary key, groupName varchar(50))")
-    
-    if err != nil {
-        return nil, err
-    }
-    
-    // news.go
-    err = dm.CreateNewsTable()
-	//_, err = dm.db.Exec("create table if not exists news (text varchar(256), unixTime int, index uti(unixTime))")
-    
-    if err != nil {
-        return nil, err
-    }
-
-	err = dm.CreateContestTable()
-	
-	if err != nil {
-        return nil, err
-    }
-	
-	err = dm.CreateContestProblemTable()
-	
-	if err != nil {
-        return nil, err
-    }
-	
-	err = dm.CreateSubmissionTable()
-
-	if err != nil {
-        return nil, err
-    }
-
-	err = dm.CreateContestParticipationManager()
+	//_, err = dm.db.Exec("create table if not exists groups (groupID int(11) auto_increment primary key, groupName varchar(50))")
 
 	if err != nil {
 		return nil, err
 	}
-	
+
+	// news.go
+	err = dm.CreateNewsTable()
+	//_, err = dm.db.Exec("create table if not exists news (text varchar(256), unixTime int, index uti(unixTime))")
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = dm.CreateContestTable()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = dm.CreateContestProblemTable()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = dm.CreateSubmissionTable()
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = dm.CreateContestParticipationTable()
+
+	if err != nil {
+		return nil, err
+	}
+
 	err = dm.CreateLanguageTable()
 
 	if err != nil {
