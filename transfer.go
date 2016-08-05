@@ -239,6 +239,8 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 				err = mainDB.SubmissionUpdate(tr.Resp.Sid, tr.Resp.Time, tr.Resp.Mem, tr.Resp.Status, 0, 0, int64(score))
 
+				mainDB.ContestRankingUpdate(Submission{Sid: tr.Resp.Sid, Time: tr.Resp.Time, Mem: tr.Resp.Mem, Score: int64(score)})
+
 				if err != nil {
 					DBLog.Println(err)
 				}

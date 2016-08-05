@@ -6,6 +6,7 @@ import (
 )
 
 type ContestParticipation struct {
+	Cpid    int64  `db:"pk"`
 	Iid     int64  `default:""`
 	Cid     int64  `default:""`
 	Score   int64  `default:"0"`
@@ -65,7 +66,7 @@ type RankingHighScoreData struct {
 
 func (dm *DatabaseManager) ContestRankingCount(cid int64) (int64, error) {
     var cnt int64
-    err := dm.db.Select(&cnt, dm.db.Count("cid", "iid"), dm.db.From("contest_participation"), dm.db.Where("cid", "=", cid))
+    err := dm.db.Select(&cnt, dm.db.Count("cpid"), dm.db.From(&ContestParticipation{}), dm.db.Where("cid", "=", cid))
 
     return cnt, err
 }
