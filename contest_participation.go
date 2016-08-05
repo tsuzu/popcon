@@ -87,7 +87,6 @@ func (dm *DatabaseManager) ContestRankingList(cid int64, offset int64, limit int
     }
 
     defer rows.Close()
-    
 
 	mapStrToInt := func(arg map[string]RankingHighScoreData) map[int64]RankingHighScoreData {
 		m := make(map[int64]RankingHighScoreData)
@@ -119,11 +118,10 @@ func (dm *DatabaseManager) ContestRankingList(cid int64, offset int64, limit int
         err = json.Unmarshal([]byte(str), &detStrMap)
 
         if err != nil {
-            return nil, err
-        }
-
-        rr.Probs = mapStrToInt(detStrMap)
-
+			rr.Probs = make(map[int64]RankingHighScoreData)
+		}else {
+			rr.Probs = mapStrToInt(detStrMap)
+		}
         resulsts = append(resulsts, rr)
     }
 
@@ -136,12 +134,14 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 	tx, err := raw.Begin()
 
 	if err != nil {
+		DBLog.Println(err) //debug
 		return err
 	}
 
 	cp, err := dm.ContestProblemFind(sm.Pid)
 
 	if err != nil {
+		DBLog.Println(err) //debug
 		return err
 	}
 
@@ -154,9 +154,10 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 		}
 	}()
 
-	rows, err := tx.Query("select score, time, details from contest_participation where iid = ? and cid = ?", sm.Iid, cp.Cid)
+	rows, err := tx.Query("select score, time, details from contest_participation where iid = ? and cid = ? for update", sm.Iid, cp.Cid)
 
 	if err != nil {
+		DBLog.Println(err) //debug
 		panic(err)
 	}
 
@@ -169,6 +170,7 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 	rows.Close()
 
 	if err != nil {
+		DBLog.Println(err) //debug
 		panic(err)
 	}
 
@@ -261,6 +263,8 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 		}
 	}
 
+	DBLog.Println(detMap)
+
     detStrMap = func() map[string]RankingHighScoreData {
 		m := make(map[string]RankingHighScoreData)
 
@@ -277,7 +281,7 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
         panic(err)
     }
 
-  	_, err = tx.Exec("update contest_participation set score = ?, time = ?, details = ? where cid = ? and iid = ?", totalScore, totalTime, string(b), sm.Iid, cp.Cid)
+  	_, err = tx.Exec("update contest_participation set score = ?, time = ?, details = ? where cid = ? and iid = ?", totalScore, totalTime, string(b), cp.Cid, sm.Iid)
     
     if err != nil {
         panic(err)

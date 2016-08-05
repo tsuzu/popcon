@@ -239,7 +239,16 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 				err = mainDB.SubmissionUpdate(tr.Resp.Sid, tr.Resp.Time, tr.Resp.Mem, tr.Resp.Status, 0, 0, int64(score))
 
-				mainDB.ContestRankingUpdate(Submission{Sid: tr.Resp.Sid, Time: tr.Resp.Time, Mem: tr.Resp.Mem, Score: int64(score)})
+				if err != nil {
+					DBLog.Println(err)
+				}
+				
+				subs, err := mainDB.SubmissionFind(tr.Resp.Sid)
+
+				DBLog.Println(err)
+				if err == nil {
+					err = mainDB.ContestRankingUpdate(*subs)
+				}
 
 				if err != nil {
 					DBLog.Println(err)
@@ -247,7 +256,8 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 				SJQueue.Remove(tr.Resp.Sid)
 
-				mainDB.SubmissionSetMsg(tr.Resp.Sid, tr.Resp.Msg)
+				err = nil
+				err = mainDB.SubmissionSetMsg(tr.Resp.Sid, tr.Resp.Msg)
 
 				if err != nil {
 					DBLog.Println(err)

@@ -560,3 +560,18 @@ func (dm *DatabaseManager) SubmissionViewFind(sid int64) (*SubmissionViewEach, e
 	return &sv, nil
 }
 
+func (dm *DatabaseManager) SubmissionGetPid(sid int64) (int64, error) {
+	rows, err := dm.db.DB().Query("select pid from submission where sid = ?", sid)
+
+	if err != nil {
+		return 0, err
+	}
+
+	defer rows.Close()
+
+	var res int64
+	rows.Next()
+	err = rows.Scan(&res)
+
+	return res, err
+}

@@ -56,11 +56,11 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 		return nil, err
 	}
 
-	isStarted := (cont.StartTime >= time.Now().Unix())
+	isStarted := (cont.StartTime <= time.Now().Unix())
 	isFinished := (cont.FinishTime <= time.Now().Unix())
 
 	free := (check && isStarted) || isFinished
-
+	
 	isAdmin := ceh.checkAdmin(cont, std)
 
 	if isAdmin {
@@ -300,6 +300,8 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			for i := range *ranks {
 				ranks2[i] = RankingRow2{(*ranks)[i], (page - 1)*ContentsPerPage + i + 1}
 			}
+
+			templateVal.Ranking = ranks2
 		}
 
 		templateVal.Pagination = CreatePaginationHelper(templateVal.Current, templateVal.MaxPage, 3)
@@ -790,6 +792,8 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 						rw.WriteHeader(http.StatusInternalServerError)
 						rw.Write([]byte(ISE500))
+
+						return
 					}
 
 					if cp.Cid != cid {
@@ -801,6 +805,8 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 					SJQueue.Push(sm.Sid)
 
 					RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/")
+
+					return
 				} else {
 					cp, err := mainDB.ContestProblemFind2(cid, id)
 
@@ -937,7 +943,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 					return
 				}
 
-				if start.Unix() >= finish.Unix() || start.Unix() < time.Now().Unix() {
+				if start.Unix() >= finish.Unix() || (cont.StartTime != start.Unix() && start.Unix() < time.Now().Unix()) || (cont.FinishTime != finish.Unix() && finish.Unix() < time.Now().Unix()){
 					msg := "開始日時及び終了日時の値が不正です。"
 					templateVal := TemplateVal{
 						cid, std.UserID, &msg, startDate, startTime, finishDate, finishTime, description, contestName,
@@ -969,7 +975,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				}
 
 				err = mainDB.ContestDescriptionUpdate(cid, description)
-
+				
 				if err != nil {
 					HttpLog.Println(std.Iid, err)
 				}
@@ -1568,7 +1574,11 @@ func CreateContestEachHandler() (*ContestEachHandler, error) {
 		"timeToString": TimeToString,
 		"add":          func(x, y int) int { return x + y },
 		"timeRangeConv": func(x, y int64) string {
-			str := fmt.Sprintf("%02d", (y - x) / 60) + ":" + fmt.Sprintf("%02d", y - x)
+			if y == 0 {
+				return "00:00"
+			}
+
+			str := fmt.Sprintf("%02d", (y - x) / 60 % 60) + ":" + fmt.Sprintf("%02d", (y - x) % 60)
 
 			if (y - x) / 3600 != 0 {
 				str = fmt.Sprintf("%02d", (y - x) / 3600) + ":" + str

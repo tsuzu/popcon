@@ -15,7 +15,7 @@ func (dm *DatabaseManager) CreateGroupTable() error {
 		return err
 	}
 
-	dm.db.CreateUniqueIndex(&User{}, "nameIdx", "name")
+	dm.db.CreateUniqueIndex(&User{}, "name")
 
 	return nil
 }

@@ -21,6 +21,9 @@
             text-align: center;
             padding-bottom: 15px;
         }
+		.center-set {
+			text-align: center;
+		}
     </style>
 </head>
 
@@ -60,25 +63,24 @@
 
             <div style="margin-top:5px;" class="panel panel-default">
                 <table class="table">
-                    <thead>
+                    <thead style="text-align: center;">
                         <tr>
-                            <th>順位</th>
-                            <th>ユーザ名</th>
+                            <th class="center-set">順位</th>
+                            <th class="center-set">ユーザ名</th>
                             {{range .Problems}}
-                                <th>{{.Pidx}}</th>
+                                <th class="center-set">{{.Pidx}}</th>
                             {{end}}
-                            <th>計</th>
+                            <th class="center-set">計</th>
                         </tr>
                     </thead>
 
-                    <tbody>
-                        {{$top := .}}
+                    <tbody style="text-align: center;">
                         {{range $r := .Ranking}}
                         <tr>
                             <td>{{$r.Rank}}</td>
                             <td><a href="/contests/{{$top.Cid}}/submissions/?user={{urlquery $r.Uid}}">{{html $r.UserName}}</a></td>
                             {{range $p := $top.Problems}}
-                                <td><p>{{with (index $r.Probs $p.Pid)}}{{.Score}}</p><p>{{timeRangeConv $top.BeginTime .Time}}{{else}}0</p><p>00:00{{end}}</p></td>
+                                <td><p>{{with (index $r.Probs $p.Pid)}}{{if (eq .Score 0)}}-{{else}}{{.Score}}{{end}}</p><p>{{if (ne .Time 0)}}{{timeRangeConv $top.BeginTime .Time}}{{end}}{{end}}</p></td>
                             {{end}}
                             <td><p>{{$r.Score}}</p><p>{{$r.Time}}</p></td>
                         </tr>

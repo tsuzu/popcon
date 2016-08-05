@@ -9,3 +9,8 @@ contests/
 contest_problems/
 submissions/
 !html/contests/
+*.png
+*.jpg
+!pojoaque.jpg
+!brown-papersq.png
+!school-book.png
