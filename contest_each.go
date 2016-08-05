@@ -882,7 +882,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				}
 
 				start, err := time.ParseInLocation("2006/01/02 15:04", startStr, Location)
-
+				
 				if err != nil {
 					msg := "開始日時の値が不正です。"
 					templateVal := TemplateVal{
@@ -894,10 +894,40 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 					return
 				}
 
+				if cont.StartTime <= time.Now().Add(2 * time.Minute).Unix() && cont.StartTime != start.Unix() {
+					msg := "開始日時は2分前を切ると変更できません。"
+
+					startDate = time.Unix(cont.StartTime, 0).Format("2006/01/02")
+					startTime = time.Unix(cont.StartTime, 0).Format("15:04")
+
+					templateVal := TemplateVal{
+						cid, std.UserID, &msg, startDate, time.Unix(cont.StartTime, 0).Format("2006/01/02 15:04"), finishDate, finishTime, description, contestName,
+					}
+
+					ceh.ManSet.Execute(rw, templateVal)
+
+					return
+				}
+
 				finish, err := time.ParseInLocation("2006/01/02 15:04", finishStr, Location)
 
 				if err != nil {
 					msg := "終了日時の値が不正です。"
+					templateVal := TemplateVal{
+						cid, std.UserID, &msg, startDate, startTime, finishDate, finishTime, description, contestName,
+					}
+
+					ceh.ManSet.Execute(rw, templateVal)
+
+					return
+				}
+
+				if cont.FinishTime <= time.Now().Add(2 * time.Minute).Unix() && cont.FinishTime != finish.Unix() {
+					msg := "終了日時は2分前を切ると変更できません。"
+
+					finishDate = time.Unix(cont.FinishTime, 0).Format("2006/01/02")
+					finishTime = time.Unix(cont.FinishTime, 0).Format("15:04")
+
 					templateVal := TemplateVal{
 						cid, std.UserID, &msg, startDate, startTime, finishDate, finishTime, description, contestName,
 					}

@@ -52,19 +52,37 @@
     <div class="contents">
         <div class="container">
             <div class="page-header">
-                <h1>管理画面</h1>
+                <h1>ユーザ作成</h1>
             </div>
 
             <div style="margin-top:10px;" class="panel panel-default">
-                <table class="table">
-                    <div class="col-xs-12 col-md-4 col-md-offset-2">
-                        <tbody>
-                            <tr><td><a href="/admin/user">ユーザ追加/変更</a></td></tr>
-                            <tr><td><a href="/languages"></a></td></tr>
-                            <tr><td><a href="/contests/{{.Cid}}/management/rejudge">リジャッジ</a></td></tr>
-                        </tbody>
-                    </div>
-                </table>
+                <form class="form-horizontal" method="post" action="/admin">
+                    <fieldset>
+                        <div class="row">
+                            <div class="col-xs-12 col-md-4 col-md-offset-2">
+                                <div class="control-group">
+                                    <label class="control-label" for="problem_select">ユーザID: </label>
+                                    <div class="controls">
+                                        <input type="text" class="form-control" name="id" />
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <label class="control-label" for="problem_select">ユーザ名: </label>
+                                    <div class="controls">
+                                        <input type="text" class="form-control" name="name" />
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <label class="control-label" for="problem_select">パスワード: </label>
+                                    <div class="controls">
+                                        <input type="password" class="form-control" name="password" />
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Create User</button>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
             </div>
         </div>
         <div style="margin-top:10px;" class="container">

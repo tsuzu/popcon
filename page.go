@@ -379,11 +379,78 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 		return &PageHandler{f}, nil
 	}()
 	// Debug request
-	res["/quit"] = &PageHandler{
-		func(_ http.ResponseWriter, _ *http.Request) {
-			os.Exit(0)
-		},
-	}
+	res["/admin"], err = func() (*PageHandler, error) {
+		tmp, err := template.ParseFiles("./html/admin_tmpl.html")
+
+		if err != nil {
+			return nil, err
+		}
+
+		f := func(rw http.ResponseWriter, req *http.Request) {
+			err := req.ParseForm()
+
+			if err != nil {
+				rw.WriteHeader(http.StatusBadRequest)
+				rw.Write([]byte(ISE500))
+
+				return
+			}
+
+			std, err := ParseRequestForUseData(req)
+
+			if err != nil || std.Gid != 0 {
+				RespondRedirection(rw, "/")
+
+				return
+			}
+
+			wrapFormStr := func(str string) string {
+				arr, has := req.Form[str]
+				if has && len(arr) != 0 {
+					return arr[0]
+				}
+				return ""
+			}
+
+			type TeplateVal struct {
+				ReCAPTCHA bool
+				Msg string
+				UserID string
+				UserName string
+				Email string
+				Password string
+				ReCAPTCHASite string
+			}
+
+			if req.Method == "GET" {
+				tmp.Execute(rw, map[string]string{"UserName": std.UserName})
+			}else {
+				id := wrapFormStr("id")
+				name := wrapFormStr("name")
+				pass := wrapFormStr("password")
+
+				if len(id) == 0 || len(name) == 0 || len(pass) == 0 {
+						rw.WriteHeader(http.StatusBadRequest)
+						rw.Write([]byte(BR400))
+
+						return
+				}
+
+				_, err := mainDB.UserAdd(id, name, pass, id + "@hoge.com", 1)
+
+				if err != nil {
+					rw.WriteHeader(http.StatusBadRequest)
+					rw.Write([]byte("BadRequest: " + err.Error()))
+					return
+				}
+
+				RespondRedirection(rw, "/admin")
+			}
+		}
+
+		return &PageHandler{f}, nil
+	}()
+
 
 	if err != nil {
 		return nil, err
