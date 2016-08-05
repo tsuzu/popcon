@@ -245,12 +245,11 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 				
 				subs, err := mainDB.SubmissionFind(tr.Resp.Sid)
 
-				DBLog.Println(err)
 				if err == nil {
 					err = mainDB.ContestRankingUpdate(*subs)
 				}
 
-				if err != nil {
+				if err != nil && err.Error() != "Admin" {
 					DBLog.Println(err)
 				}
 

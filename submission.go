@@ -173,6 +173,20 @@ func (dm *DatabaseManager) SubmissionRemove(sid int64) error {
 	return os.RemoveAll(SubmissionDir + strconv.FormatInt(sid, 10))
 }
 
+func (dm *DatabaseManager) SubmissionRemoveAll(pid int64) error {
+	sml, err := dm.SubmissionList(dm.db.Where("pid", "=", pid))
+
+	if err != nil {
+		return err
+	}
+
+	for i := range *sml {
+		dm.SubmissionRemove((*sml)[i].Sid)
+	}
+
+	return nil
+}
+
 func (dm *DatabaseManager) SubmissionFind(sid int64) (*Submission, error) {
 	var results []Submission
 

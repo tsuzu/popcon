@@ -728,6 +728,36 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				ContestName string
 			}
 			ceh.ManTop.Execute(rw, TemplateVal{cid, std.UserName, cont.Name})
+		}else if req.URL.Path == "remove" {
+			list, err := mainDB.ContestProblemList(cid)
+
+			if err != nil {
+				DBLog.Println(err)
+			}
+
+			for i := range *list {
+				err = mainDB.SubmissionRemoveAll((*list)[i].Pid)
+
+				if err != nil {
+					DBLog.Println(err)
+				}
+			}
+
+			err = mainDB.ContestParticipationRemove(cid)
+
+			if err != nil {
+				DBLog.Println(err)
+			}
+
+			err = mainDB.ContestDelete(cid)
+
+			if err != nil {
+				DBLog.Println(err)
+			}
+
+			RespondRedirection(rw, "/contests/")
+
+			return
 		} else if req.URL.Path == "rejudge" {
 			respondTemp := func(msg string) {
 				type TemplateVal struct {

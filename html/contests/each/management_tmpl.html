@@ -67,6 +67,9 @@
                     </div>
                 </table>
             </div>
+            <div style="margin-top:10px;">
+                <button type="button" class="btn btn-danger" id="remove">Remove this contest</button>
+            </div>
         </div>
         <div style="margin-top:10px;" class="container">
             <footer class="container-fluid" id="footer">
@@ -74,5 +77,14 @@
             </footer>
         </div>
     </div>
+    <script>
+        (function(){
+            $("#remove").click(function(){
+                if(confirm("一度削除すると復元できません。よろしいですか?")) {
+                    location.href="./remove";
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

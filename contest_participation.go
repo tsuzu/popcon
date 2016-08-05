@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"strconv"
+	"errors"
 )
 
 type ContestParticipation struct {
@@ -52,8 +53,8 @@ func (dm *DatabaseManager) ContestParticipationCheck(iid, cid int64) (bool, erro
 	}
 }
 
-func (dm *DatabaseManager) ContestParticipationRemove(iid, cid int64) error {
-	_, err := dm.db.Delete(&ContestParticipation{Iid: iid, Cid: cid})
+func (dm *DatabaseManager) ContestParticipationRemove(cid int64) error {
+	_, err := dm.db.DB().Exec("delete from contest_participation where cid = ?", cid)
 
 	return err
 }
@@ -161,7 +162,9 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 		panic(err)
 	}
 
-	rows.Next()
+	if !rows.Next() {
+		panic(errors.New("Admin"))
+	}
 
 	var totalScore, totalTime int64
 	var details string
@@ -195,47 +198,49 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 	val, has := detMap[sm.Pid]
 
 	if !has {
-		detMap[sm.Pid] = RankingHighScoreData{sm.Sid, sm.Score, sm.Time}
+		detMap[sm.Pid] = RankingHighScoreData{sm.Sid, sm.Score, sm.SubmitTime}
 
 		totalScore += sm.Score
 
-		if totalTime < sm.Time {
-			totalTime = sm.Time
+		if totalTime < sm.SubmitTime {
+			totalTime = sm.SubmitTime
 		}
 	} else {
-		if val.Sid == sm.Sid {
-			rows, err := raw.Query("select sid, score, time from submission where pid = ? and cid = ? order by score desc, time limit 1", sm.Pid, cp.Cid)
+		if val.Score > sm.Score {
+			if val.Sid == sm.Sid {
+				rowsr, err := raw.Query("select sid, score, time from submission where pid = ? order by score desc, time limit 1", sm.Pid)
 
-			if err != nil {
-				panic(err)
-			}
-
-			rows.Next()
-
-			var sid, score, time int64
-			err = rows.Scan(&sid, &score, &time)
-
-            rows.Close()
-
-			if err != nil {
-                detMap[sm.Pid] = RankingHighScoreData{0, 0, 0}
-			} else {
-                detMap[sm.Pid] = RankingHighScoreData{sid, score, time}
-			}
-			
-            var scoreSum, maxTime int64
-			for i := range detMap {
-				scoreSum += detMap[i].Score
-
-				if maxTime < detMap[i].Time {
-					maxTime = detMap[i].Time
+				if err != nil {
+					panic(err)
 				}
+
+				rowsr.Next()
+
+				var sid, score, time int64
+				err = rowsr.Scan(&sid, &score, &time)
+
+        	    rowsr.Close()
+
+				if err != nil {
+        	        detMap[sm.Pid] = RankingHighScoreData{0, 0, 0}
+				} else {
+        	        detMap[sm.Pid] = RankingHighScoreData{sid, score, time}
+				}
+			
+    	        var scoreSum, maxTime int64
+				for i := range detMap {
+					scoreSum += detMap[i].Score
+
+					if maxTime < detMap[i].Time {
+						maxTime = detMap[i].Time
+					}
+				}
+    	        totalScore = scoreSum
+	            totalTime = maxTime
 			}
-            totalScore = scoreSum
-            totalTime = maxTime
     	} else {
 			if val.Score < sm.Score {
-				detMap[sm.Pid] = RankingHighScoreData{sm.Sid, sm.Score, sm.Time}
+				detMap[sm.Pid] = RankingHighScoreData{sm.Sid, sm.Score, sm.SubmitTime}
 
 				var scoreSum, maxTime int64
 				for i := range detMap {
@@ -249,7 +254,7 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
                 totalTime = maxTime
 			} else if val.Sid > sm.Sid {
 				if val.Score == sm.Score {
-					detMap[sm.Pid] = RankingHighScoreData{sm.Sid, sm.Score, sm.Time}
+					detMap[sm.Pid] = RankingHighScoreData{sm.Sid, sm.Score, sm.SubmitTime}
 
 					var maxTime int64
 					for i := range detMap {
@@ -262,8 +267,6 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 			}
 		}
 	}
-
-	DBLog.Println(detMap)
 
     detStrMap = func() map[string]RankingHighScoreData {
 		m := make(map[string]RankingHighScoreData)
@@ -320,7 +323,7 @@ func (dm *DatabaseManager) ContestRankingCheckProblem(cid int64) (rete error) {
 		}
 	}()
 
-	rows, err := tx.Query("select iid, score, time, details from contest_participation where cid = ?", cid)
+	rows, err := tx.Query("select iid, score, time, details from contest_participation where cid = ? for update", cid)
 
 	if err != nil {
 		panic(err)
@@ -402,4 +405,3 @@ func (dm *DatabaseManager) ContestRankingCheckProblem(cid int64) (rete error) {
 
     return nil
 }
-

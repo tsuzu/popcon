@@ -62,7 +62,7 @@
             </div>
 
             <div style="margin-top:5px;" class="panel panel-default">
-                <table class="table">
+                <table class="table table-condensed">
                     <thead style="text-align: center;">
                         <tr>
                             <th class="center-set">順位</th>
@@ -82,11 +82,11 @@
                             {{range $p := $top.Problems}}
                                 <td><p>{{with (index $r.Probs $p.Pid)}}{{if (eq .Score 0)}}-{{else}}{{.Score}}{{end}}</p><p>{{if (ne .Time 0)}}{{timeRangeConv $top.BeginTime .Time}}{{end}}{{end}}</p></td>
                             {{end}}
-                            <td><p>{{$r.Score}}</p><p>{{$r.Time}}</p></td>
+                            <td><p>{{$r.Score}}</p><p>{{if (eq $r.Time 0)}}00:00{{else}}{{timeRangeConv $top.BeginTime $r.Time}}{{end}}</p></td>
                         </tr>
                         {{else}}
                         <tr>
-                            <td>参加者がいません。</td>
+                            <td class="center-set">参加者がいません。</td>
                         </tr>
                         {{end}}
                     </tbody>

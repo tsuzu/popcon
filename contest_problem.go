@@ -663,3 +663,9 @@ func (dm *DatabaseManager) ContestProblemListLight(cid int64) (*[]ContestProblem
 
     return &results, nil
 }
+
+func (dm *DatabaseManager) ContestProblemRemoveAll(cid int64) error {
+    _, err := dm.db.DB().Exec("delete from contest_problem where cid = ?", cid)
+
+    return err
+}
