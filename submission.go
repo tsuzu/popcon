@@ -71,25 +71,27 @@ func (dm *DatabaseManager) CreateSubmissionTable() error {
 	return nil
 }
 
-func (dm *DatabaseManager) SubmissionNew(pid, iid, lang int64, code string) (int64, error) {
-	sm := Submission{
-		Pid:        pid,
-		Iid:        iid,
-		Lang:       lang,
-		Time:       0,
-		Mem:        0,
-		Score:      0,
-		SubmitTime: time.Now().Unix(),
-		Status:     int64(InQueue),
-		Prog:       0,
-	}
-
-	_, err := dm.db.Insert(&sm)
-	id := sm.Sid
-
+func (dm *DatabaseManager) SubmissionNew(pid, iid, lang int64, code string) (i int64, b error) {
+	tx, err := dm.db.DB().Begin()
+	
 	if err != nil {
 		return 0, err
 	}
+
+	res, err := tx.Exec("insert into submission (pid, iid, lang, time, mem, score, submit_time, status, prog) values (?, ?, ?, ?, ?, ?, ?, ?, ?)", pid, iid, lang, 0, 0, 0, time.Now().Unix(), int64(InQueue), 0)
+
+	if err != nil {
+		tx.Rollback()
+		return 0, err
+	}
+
+	id, err := res.LastInsertId()
+
+	if err != nil {
+		tx.Rollback()
+		return 0, err
+	}
+	tx.Commit()
 
 	err = os.MkdirAll(SubmissionDir+strconv.FormatInt(id, 10), os.ModePerm)
 
@@ -423,6 +425,10 @@ func (dm *DatabaseManager) submissionViewQueryCreate(query string, cid, iid, lid
 		conditions = append(conditions, "contest_problem.pidx = " + strconv.FormatInt(pidx, 10) + " ")
 	}
 
+	if lid != -1 {
+		conditions = append(conditions, "language.lid = " + strconv.FormatInt(lid, 10) + " ")
+	}
+
 	if stat != -1 {
 		conditions = append(conditions, "submission.status = " + strconv.FormatInt(stat, 10) + " ")
 	}
@@ -565,7 +571,7 @@ func (dm *DatabaseManager) SubmissionViewFind(sid int64) (*SubmissionViewEach, e
 		sv.Status = SubmissionStatusToString[SubmissionStatus(status)]
 	}
 
-    if status != int64(Accepted) && status != int64(WrongAnswer) {
+    if status == int64(CompileError) || status == int64(InQueue) || status == int64(Judging) {
         sv.Mem = -1
         sv.Time = -1
         sv.Score = -1

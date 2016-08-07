@@ -404,7 +404,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				User        string
 			}
 			var templateVal TemplateVal
-			templateVal.AllEnabled = isFinished || free
+			templateVal.AllEnabled = isFinished || isAdmin
 			templateVal.ContestName = cont.Name
 			templateVal.Cid = cid
 			templateVal.UserName = std.UserName
@@ -867,6 +867,8 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 					}
 
 					RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/")
+
+					return
 				}
 
 				RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/")

@@ -11,6 +11,11 @@ import (
 	"strings"
 	"bytes"
 	"unicode/utf8"
+	"os"
+	"io/ioutil"
+	"github.com/russross/blackfriday"
+	"github.com/microcosm-cc/bluemonday"
+	html "html/template"
 )
 
 var UTF8_BOM = []byte{239, 187, 191}
@@ -377,6 +382,67 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 		return &PageHandler{f}, nil
 	}()
+
+	res["/help"], err = func() (*PageHandler, error) {
+		tmp, err := template.ParseFiles("./html/help_tmpl.html")
+		
+	
+		if err != nil {
+			return nil, err
+		}
+
+		type TemplateVal struct {
+			Help html.HTML
+			UserName string
+			IsSignedIn bool
+		}
+
+
+		f := func(rw http.ResponseWriter, req *http.Request) {
+			rw.WriteHeader(http.StatusNotFound)
+			rw.Write([]byte(NF404))
+
+			return 
+
+			std, err := ParseRequestForUseData(req)
+
+			var IsSignedIn bool = false
+			var Name string
+			if err == nil {
+				IsSignedIn = true
+				Name = std.UserName
+			}
+
+			fp, err := os.Open("./html/help.md")
+
+			if err != nil {
+				HttpLog.Println(err)
+				rw.WriteHeader(http.StatusInternalServerError)
+				rw.Write([]byte(ISE500))
+
+				return
+			}
+			defer fp.Close()
+
+			b, err := ioutil.ReadAll(fp)
+
+			if err != nil {
+				HttpLog.Println(err)
+				rw.WriteHeader(http.StatusInternalServerError)
+				rw.Write([]byte(ISE500))
+
+				return
+			}
+
+			unsafe := blackfriday.MarkdownCommon(b)
+			page := bluemonday.UGCPolicy().SanitizeBytes(unsafe)
+
+			tmp.Execute(rw, TemplateVal{html.HTML(string(page)), Name, IsSignedIn})
+		}
+
+		return &PageHandler{f}, nil
+	}()
+
 	// Debug request
 	res["/admin"], err = func() (*PageHandler, error) {
 		tmp, err := template.ParseFiles("./html/admin_tmpl.html")
@@ -411,7 +477,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 				return ""
 			}
 
-			type TeplateVal struct {
+			/*type TeplateVal struct {
 				ReCAPTCHA bool
 				Msg string
 				UserID string
@@ -419,7 +485,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 				Email string
 				Password string
 				ReCAPTCHASite string
-			}
+			}*/
 
 			if req.Method == "GET" {
 				tmp.Execute(rw, map[string]string{"UserName": std.UserName})

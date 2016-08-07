@@ -116,7 +116,7 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 				casesm := make(map[string]TestCase)
 
 				for i := range *cases {
-					casesm[strconv.FormatInt(int64(i), 32)] = (*cases)[i]
+					casesm[strconv.FormatInt(int64(i), 10)] = (*cases)[i]
 				}
 
 				jr := JudgeRequest{
@@ -167,7 +167,7 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 						if err != nil {
 							DBLog.Println(err)
 						} else {
-
+							HttpLog.Println(tr.Resp.CaseName)
 							err := mainDB.SubmissionSetCase(tr.Resp.Sid, tr.Resp.Case, SubmissionTestCase{
 								tr.Resp.Status,
 								tr.Resp.CaseName,
@@ -249,7 +249,7 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 					err = mainDB.ContestRankingUpdate(*subs)
 				}
 
-				if err != nil && err.Error() != "Admin" {
+				if err != nil && err.Error() != "None" {
 					DBLog.Println(err)
 				}
 

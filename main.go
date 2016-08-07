@@ -100,7 +100,7 @@ func main() {
 
 	// Should use TLS
 	server := http.Server{
-		Addr:           ":8080",
+		Addr:           ":80",
 		MaxHeaderBytes: 1 << 20,
 		Handler:        xssProtector,
 	}

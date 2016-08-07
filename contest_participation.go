@@ -132,14 +132,26 @@ func (dm *DatabaseManager) ContestRankingList(cid int64, offset int64, limit int
 func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 	raw := dm.db.DB()
 
-	tx, err := raw.Begin()
+	cp, err := dm.ContestProblemFind(sm.Pid)
 
 	if err != nil {
 		DBLog.Println(err) //debug
 		return err
 	}
 
-	cp, err := dm.ContestProblemFind(sm.Pid)
+	cont, err := dm.ContestFind(cp.Cid)
+
+	if err != nil {
+		DBLog.Println(err)
+
+		return err
+	}
+
+	if cont.FinishTime <= sm.SubmitTime {
+		return errors.New("None")
+	}
+
+	tx, err := raw.Begin()
 
 	if err != nil {
 		DBLog.Println(err) //debug
@@ -163,7 +175,7 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 	}
 
 	if !rows.Next() {
-		panic(errors.New("Admin"))
+		panic(errors.New("None"))
 	}
 
 	var totalScore, totalTime int64
@@ -208,7 +220,7 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 	} else {
 		if val.Score > sm.Score {
 			if val.Sid == sm.Sid {
-				rowsr, err := raw.Query("select sid, score, time from submission where pid = ? order by score desc, time limit 1", sm.Pid)
+				rowsr, err := raw.Query("select sid, score, submit_time from submission where pid = ? order by score desc, time limit 1", sm.Pid)
 
 				if err != nil {
 					panic(err)
