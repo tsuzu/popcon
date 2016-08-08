@@ -521,7 +521,7 @@ func (dm *DatabaseManager) SubmissionViewList(cid, iid, lid, pidx, stat, offset,
 			sv.Status = SubmissionStatusToString[SubmissionStatus(status)]
 		}
 
-        if status != int64(Accepted) && status != int64(WrongAnswer) {
+        if status == int64(CompileError) || status == int64(InQueue) || status == int64(Judging) {
             sv.Mem = -1
             sv.Time = -1
             sv.Score = -1

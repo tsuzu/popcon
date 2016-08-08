@@ -97,7 +97,12 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 		}
 
 		unsafe := blackfriday.MarkdownCommon([]byte(desc))
-		html := bluemonday.UGCPolicy().SanitizeBytes(unsafe)
+
+		policy := bluemonday.UGCPolicy()
+		policy.AllowAttrs("width").OnElements("img")
+		policy.AllowAttrs("height").OnElements("img")
+
+		html := policy.SanitizeBytes(unsafe)
 
 		templateVal := TemplateVal{
 			UserName:               std.UserName,
