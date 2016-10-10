@@ -23,9 +23,8 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 	dm := &DatabaseManager{}
 	var err error
 
-	// pcpjudge Database
-	dm.db, err = genmai.New(&genmai.MySQLDialect{}, settings.DB)
-	//	dm.db, err = sql.Open("mysql", "popcon:password@/popcon") // Should change password
+	// Database
+	dm.db, err = genmai.New(&genmai.MySQLDialect{}, settingManager.Get().DB)
 
 	if err != nil {
 		return nil, err
@@ -53,7 +52,6 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 
 	// session.go
 	// Create Sessions Table
-	// TODO: Fix a bug about Year 2038 Bug in unixTimeLimit
 	err = dm.CreateSessionTable()
 	//_, err = dm.db.Exec("create table if not exists sessions (sessionID varchar(50) primary key, internalID int(11), unixTimeLimit int(11), index iid(internalID), index idx(unixTimeLimit))")
 
@@ -63,7 +61,6 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 
 	// user_and_group.go
 	err = dm.CreateGroupTable()
-	//_, err = dm.db.Exec("create table if not exists groups (groupID int(11) auto_increment primary key, groupName varchar(50))")
 
 	if err != nil {
 		return nil, err
@@ -71,7 +68,6 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 
 	// news.go
 	err = dm.CreateNewsTable()
-	//_, err = dm.db.Exec("create table if not exists news (text varchar(256), unixTime int, index uti(unixTime))")
 
 	if err != nil {
 		return nil, err

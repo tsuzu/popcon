@@ -8,10 +8,10 @@ import (
 	"text/template"
 	"time"
 
+	"fmt"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday"
 	"io/ioutil"
-	"fmt"
 )
 
 type ContestEachHandler struct {
@@ -60,7 +60,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 	isFinished := (cont.FinishTime <= time.Now().Unix())
 
 	free := (check && isStarted) || isFinished
-	
+
 	isAdmin := ceh.checkAdmin(cont, std)
 
 	if isAdmin {
@@ -232,14 +232,14 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 		type TemplateVal struct {
 			ContestName string
-			Cid int64
-			UserName string
-			Problems []ContestProblem
-			Ranking []RankingRow2
-			Current int
-			MaxPage int
-			BeginTime int64
-			Pagination []PaginationHelper
+			Cid         int64
+			UserName    string
+			Problems    []ContestProblem
+			Ranking     []RankingRow2
+			Current     int
+			MaxPage     int
+			BeginTime   int64
+			Pagination  []PaginationHelper
 		}
 
 		if page == -1 {
@@ -270,7 +270,6 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			return
 		}
 		templateVal.Problems = *probs
-
 
 		templateVal.Current = 1
 
@@ -303,7 +302,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 			ranks2 := make([]RankingRow2, len(*ranks))
 
 			for i := range *ranks {
-				ranks2[i] = RankingRow2{(*ranks)[i], (page - 1)*ContentsPerPage + i + 1}
+				ranks2[i] = RankingRow2{(*ranks)[i], (page-1)*ContentsPerPage + i + 1}
 			}
 
 			templateVal.Ranking = ranks2
@@ -701,7 +700,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				}
 			}
 
-			subm, err := mainDB.SubmissionNew(prob.Pid, std.Iid, lid, code)
+			subm, err := mainDB.SubmissionAdd(prob.Pid, std.Iid, lid, code)
 
 			if err != nil {
 				HttpLog.Println(err)
@@ -733,7 +732,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				ContestName string
 			}
 			ceh.ManTop.Execute(rw, TemplateVal{cid, std.UserName, cont.Name})
-		}else if req.URL.Path == "remove" {
+		} else if req.URL.Path == "remove" {
 			list, err := mainDB.ContestProblemList(cid)
 
 			if err != nil {
@@ -925,7 +924,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				}
 
 				start, err := time.ParseInLocation("2006/01/02 15:04", startStr, Location)
-				
+
 				if err != nil {
 					msg := "開始日時の値が不正です。"
 					templateVal := TemplateVal{
@@ -937,7 +936,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 					return
 				}
 
-				if cont.StartTime <= time.Now().Add(2 * time.Minute).Unix() && cont.StartTime != start.Unix() {
+				if cont.StartTime <= time.Now().Add(2*time.Minute).Unix() && cont.StartTime != start.Unix() {
 					msg := "開始日時は2分前を切ると変更できません。"
 
 					startDate = time.Unix(cont.StartTime, 0).Format("2006/01/02")
@@ -965,7 +964,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 					return
 				}
 
-				if cont.FinishTime <= time.Now().Add(2 * time.Minute).Unix() && cont.FinishTime != finish.Unix() {
+				if cont.FinishTime <= time.Now().Add(2*time.Minute).Unix() && cont.FinishTime != finish.Unix() {
 					msg := "終了日時は2分前を切ると変更できません。"
 
 					finishDate = time.Unix(cont.FinishTime, 0).Format("2006/01/02")
@@ -980,7 +979,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 					return
 				}
 
-				if start.Unix() >= finish.Unix() || (cont.StartTime != start.Unix() && start.Unix() < time.Now().Unix()) || (cont.FinishTime != finish.Unix() && finish.Unix() < time.Now().Unix()){
+				if start.Unix() >= finish.Unix() || (cont.StartTime != start.Unix() && start.Unix() < time.Now().Unix()) || (cont.FinishTime != finish.Unix() && finish.Unix() < time.Now().Unix()) {
 					msg := "開始日時及び終了日時の値が不正です。"
 					templateVal := TemplateVal{
 						cid, std.UserID, &msg, startDate, startTime, finishDate, finishTime, description, contestName,
@@ -1012,7 +1011,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 				}
 
 				err = mainDB.ContestDescriptionUpdate(cid, description)
-				
+
 				if err != nil {
 					HttpLog.Println(std.Iid, err)
 				}
@@ -1404,7 +1403,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 						return
 					}
 
-					RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/testcases/" + strconv.FormatInt(pidx, 10))
+					RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/testcases/"+strconv.FormatInt(pidx, 10))
 				} else {
 					rw.WriteHeader(http.StatusBadRequest)
 					rw.Write([]byte(BR400))
@@ -1453,9 +1452,9 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 					}
 
 					ceh.ManTcV.Execute(rw, templateVal)
-				}else if len(arr) == 3 {
+				} else if len(arr) == 3 {
 					if req.Method == "POST" {
-						err:= req.ParseMultipartForm(10 * 1024 * 1024)
+						err := req.ParseMultipartForm(10 * 1024 * 1024)
 
 						if err != nil {
 							rw.WriteHeader(http.StatusBadRequest)
@@ -1465,7 +1464,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 						}
 
 						file, _, err := req.FormFile("file")
-						
+
 						if err != nil {
 							rw.WriteHeader(http.StatusBadRequest)
 							rw.Write([]byte(BR400))
@@ -1474,12 +1473,12 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 						}
 						l, err := file.Seek(0, 2)
 
-						if err != nil{
+						if err != nil {
 							rw.WriteHeader(http.StatusBadRequest)
 							rw.Write([]byte(BR400))
 
 							return
-						}else if l > 20 * 1024 * 1024 {
+						} else if l > 20*1024*1024 {
 							rw.WriteHeader(http.StatusRequestEntityTooLarge)
 							rw.Write([]byte(RETL413))
 
@@ -1501,9 +1500,9 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 						if arr[2] == "input" {
 							err = cp.UpdateTestCase(true, int(tcid), ReplaceEndline(string(b)))
-						}else if arr[2] == "output"{
+						} else if arr[2] == "output" {
 							err = cp.UpdateTestCase(false, int(tcid), ReplaceEndline(string(b)))
-						}else {
+						} else {
 							rw.WriteHeader(http.StatusNotFound)
 							rw.Write([]byte(NF404))
 
@@ -1519,16 +1518,16 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 							return
 						}
 
-						RespondRedirection(rw, "/contests/" + strconv.FormatInt(cid, 10) + "/management/testcases/" + strconv.FormatInt(pidx, 10) + "/" + strconv.FormatInt(int64(tcid), 10))
-					}else if req.Method == "GET" {
+						RespondRedirection(rw, "/contests/"+strconv.FormatInt(cid, 10)+"/management/testcases/"+strconv.FormatInt(pidx, 10)+"/"+strconv.FormatInt(int64(tcid), 10))
+					} else if req.Method == "GET" {
 						var str string
 						var err error
 
 						if arr[2] == "input" {
 							str, err = cp.LoadTestCase(true, int(tcid))
-						}else if arr[2] == "output"{
+						} else if arr[2] == "output" {
 							str, err = cp.LoadTestCase(false, int(tcid))
-						}else {
+						} else {
 							rw.WriteHeader(http.StatusNotFound)
 							rw.Write([]byte(NF404))
 
@@ -1546,7 +1545,7 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 						if arr[2] == "input" {
 							fileName += "_in.txt"
-						}else {
+						} else {
 							fileName += "_out.txt"
 						}
 
@@ -1556,13 +1555,13 @@ func (ceh *ContestEachHandler) GetHandler(cid int64, std SessionTemplateData) (h
 
 						rw.WriteHeader(http.StatusOK)
 						rw.Write([]byte(str))
-					}else {
+					} else {
 						rw.WriteHeader(http.StatusNotFound)
 						rw.Write([]byte(NF404))
 
 						return
 					}
-				}else {
+				} else {
 					rw.WriteHeader(http.StatusBadRequest)
 					rw.Write([]byte(BR400))
 
@@ -1615,12 +1614,12 @@ func CreateContestEachHandler() (*ContestEachHandler, error) {
 				return "00:00"
 			}
 
-			str := fmt.Sprintf("%02d", (y - x) / 60 % 60) + ":" + fmt.Sprintf("%02d", (y - x) % 60)
+			str := fmt.Sprintf("%02d", (y-x)/60%60) + ":" + fmt.Sprintf("%02d", (y-x)%60)
 
-			if (y - x) / 3600 != 0 {
-				str = fmt.Sprintf("%02d", (y - x) / 3600) + ":" + str
+			if (y-x)/3600 != 0 {
+				str = fmt.Sprintf("%02d", (y-x)/3600) + ":" + str
 			}
-			
+
 			return str
 		},
 	}

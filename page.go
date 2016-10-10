@@ -1,21 +1,21 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha512"
 	"errors"
 	"fmt"
-	"net/http"
-	"text/template"
-	"reflect"
-	"time"
-	"strings"
-	"bytes"
-	"unicode/utf8"
-	"os"
-	"io/ioutil"
-	"github.com/russross/blackfriday"
 	"github.com/microcosm-cc/bluemonday"
+	"github.com/russross/blackfriday"
 	html "html/template"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"reflect"
+	"strings"
+	"text/template"
+	"time"
+	"unicode/utf8"
 )
 
 var UTF8_BOM = []byte{239, 187, 191}
@@ -34,7 +34,7 @@ func StripEndline(in []byte) []byte {
 }
 
 func UTF8StringLengthAndBOMCheck(str string, l int) bool {
-	if len(str) > l * 6 {
+	if len(str) > l*6 {
 		return false
 	}
 
@@ -94,8 +94,8 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 		temp, err := template.New("").Funcs(funcs).ParseFiles("./html/index_tmpl.html")
 
 		if err != nil {
-        	return nil, err
-    	}
+			return nil, err
+		}
 
 		tmp := temp.Lookup("index_tmpl.html")
 
@@ -182,7 +182,6 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 		handler := http.StripPrefix("/contests", *contestsTopHandler)
 
-
 		f := func(rw http.ResponseWriter, req *http.Request) {
 			handler.ServeHTTP(rw, req)
 		}
@@ -262,7 +261,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 				if err != nil {
 					rw.WriteHeader(http.StatusInternalServerError)
-                    HttpLog.Println("page.go:261:", err)
+					HttpLog.Println("page.go:261:", err)
 
 					fmt.Fprint(rw, ISE500)
 				} else {
@@ -273,8 +272,8 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 					}
 
 					http.SetCookie(rw, &cookie)
-					
-					backurl[0] = /*"http://azure2.wt6.pw:10065" + */backurl[0] // TODO: Load from setting file
+
+					backurl[0] = /*"http://azure2.wt6.pw:10065" + */ backurl[0] // TODO: Load from setting file
 
 					RespondRedirection(rw, backurl[0])
 				}
@@ -366,17 +365,17 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 			}
 
 			type TeplateVal struct {
-				ReCAPTCHA bool
-				Msg string
-				UserID string
-				UserName string
-				Email string
-				Password string
+				ReCAPTCHA     bool
+				Msg           string
+				UserID        string
+				UserName      string
+				Email         string
+				Password      string
 				ReCAPTCHASite string
 			}
 
 			if req.Method == "GET" {
-				
+
 			}
 		}
 
@@ -385,24 +384,22 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 	res["/help"], err = func() (*PageHandler, error) {
 		tmp, err := template.ParseFiles("./html/help_tmpl.html")
-		
-	
+
 		if err != nil {
 			return nil, err
 		}
 
 		type TemplateVal struct {
-			Help html.HTML
-			UserName string
+			Help       html.HTML
+			UserName   string
 			IsSignedIn bool
 		}
-
 
 		f := func(rw http.ResponseWriter, req *http.Request) {
 			rw.WriteHeader(http.StatusNotFound)
 			rw.Write([]byte(NF404))
 
-			return 
+			return
 
 			std, err := ParseRequestForUseData(req)
 
@@ -489,19 +486,19 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 			if req.Method == "GET" {
 				tmp.Execute(rw, map[string]string{"UserName": std.UserName})
-			}else {
+			} else {
 				id := wrapFormStr("id")
 				name := wrapFormStr("name")
 				pass := wrapFormStr("password")
 
 				if len(id) == 0 || len(name) == 0 || len(pass) == 0 {
-						rw.WriteHeader(http.StatusBadRequest)
-						rw.Write([]byte(BR400))
+					rw.WriteHeader(http.StatusBadRequest)
+					rw.Write([]byte(BR400))
 
-						return
+					return
 				}
 
-				_, err := mainDB.UserAdd(id, name, pass, id + "@hoge.com", 1)
+				_, err := mainDB.UserAdd(id, name, pass, id+"@hoge.com", 1)
 
 				if err != nil {
 					rw.WriteHeader(http.StatusBadRequest)
@@ -515,7 +512,6 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 		return &PageHandler{f}, nil
 	}()
-
 
 	if err != nil {
 		return nil, err

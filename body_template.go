@@ -16,7 +16,6 @@ Received an illegal request.
 </html>
 `
 
-
 // NF404 is "404 Not Found"
 const FBD403 = `
 <!DOCTYPE html>
@@ -32,6 +31,7 @@ You can't see this page.
 </body>
 </html>
 `
+
 // NF404 is "404 Not Found"
 const NF404 = `
 <!DOCTYPE html>

@@ -4,8 +4,8 @@ import "errors"
 
 // Group is a struct to save GroupData
 type Group struct {
-    Gid int64 `db:"pk"`
-    Name string `default:""`
+	Gid  int64  `db:"pk"`
+	Name string `default:""`
 }
 
 func (dm *DatabaseManager) CreateGroupTable() error {
@@ -23,41 +23,39 @@ func (dm *DatabaseManager) CreateGroupTable() error {
 // GroupAdd adds a new group
 // len(groupName) <= 50
 func (dm *DatabaseManager) GroupAdd(groupName string) (int64, error) {
-    if len(groupName) > 50 {
-        return 0, errors.New("len(groupName) > 50")
-    }
-    
-	group := &Group{Name: groupName}
+	if len(groupName) > 50 {
+		return 0, errors.New("len(groupName) > 50")
+	}
 
-	_, err := dm.db.Insert(&group)
+	res, err := dm.db.DB().Exec("insert into group (name) values (?)", groupName)
 
 	if err != nil {
 		return 0, err
 	}
 
-	return group.Gid, nil
+	return res.LastInsertId()
 }
 
 // GroupFind finds a group with groupID
 func (dm *DatabaseManager) GroupFind(gid int) (*Group, error) {
-    var resulsts []Group
+	var resulsts []Group
 
 	err := dm.db.Select(&resulsts, dm.db.Where("gid", "=", gid))
-	
+
 	if err != nil {
-        return nil, err
-    }
-    
-    if len(resulsts) == 0 {
+		return nil, err
+	}
+
+	if len(resulsts) == 0 {
 		return nil, errors.New("Unknown group")
 	}
 
-	return &resulsts[0], nil	
+	return &resulsts[0], nil
 }
 
 // GroupRemove removes from groups
 func (dm *DatabaseManager) GroupRemove(gid int64) error {
 	_, err := dm.db.Delete(&Group{Gid: gid})
 
-	return err 
+	return err
 }

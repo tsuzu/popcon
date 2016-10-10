@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"strconv"
 	"errors"
+	"strconv"
 )
 
 type ContestParticipation struct {
@@ -66,28 +66,28 @@ type RankingHighScoreData struct {
 }
 
 func (dm *DatabaseManager) ContestRankingCount(cid int64) (int64, error) {
-    var cnt int64
-    err := dm.db.Select(&cnt, dm.db.Count("cpid"), dm.db.From(&ContestParticipation{}), dm.db.Where("cid", "=", cid))
+	var cnt int64
+	err := dm.db.Select(&cnt, dm.db.Count("cpid"), dm.db.From(&ContestParticipation{}), dm.db.Where("cid", "=", cid))
 
-    return cnt, err
+	return cnt, err
 }
 
 type RankingRow struct {
-    Uid string
-    UserName string
-    Score int64
-    Time int64
-    Probs map[int64]RankingHighScoreData
+	Uid      string
+	UserName string
+	Score    int64
+	Time     int64
+	Probs    map[int64]RankingHighScoreData
 }
 
 func (dm *DatabaseManager) ContestRankingList(cid int64, offset int64, limit int64) (*[]RankingRow, error) {
-    rows, err := dm.db.DB().Query("select user.uid, user.user_name, contest_participation.score, contest_participation.time, contest_participation.details from contest_participation inner join user on user.iid = contest_participation.iid where cid = ? order by contest_participation.score desc, contest_participation.time limit ?, ?", cid, offset,limit)
+	rows, err := dm.db.DB().Query("select user.uid, user.user_name, contest_participation.score, contest_participation.time, contest_participation.details from contest_participation inner join user on user.iid = contest_participation.iid where cid = ? order by contest_participation.score desc, contest_participation.time limit ?, ?", cid, offset, limit)
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    defer rows.Close()
+	defer rows.Close()
 
 	mapStrToInt := func(arg map[string]RankingHighScoreData) map[int64]RankingHighScoreData {
 		m := make(map[int64]RankingHighScoreData)
@@ -101,32 +101,32 @@ func (dm *DatabaseManager) ContestRankingList(cid int64, offset int64, limit int
 		}
 
 		return m
-    }
+	}
 
-    resulsts := make([]RankingRow, 0, 50)
-    for rows.Next() {
-        var rr RankingRow
-        var str string
-        
-        err := rows.Scan(&rr.Uid, &rr.UserName, &rr.Score, &rr.Time, &str)
+	resulsts := make([]RankingRow, 0, 50)
+	for rows.Next() {
+		var rr RankingRow
+		var str string
 
-        if err != nil {
-            return nil, err
-        }
+		err := rows.Scan(&rr.Uid, &rr.UserName, &rr.Score, &rr.Time, &str)
 
-        var detStrMap map[string]RankingHighScoreData
+		if err != nil {
+			return nil, err
+		}
 
-        err = json.Unmarshal([]byte(str), &detStrMap)
+		var detStrMap map[string]RankingHighScoreData
 
-        if err != nil {
+		err = json.Unmarshal([]byte(str), &detStrMap)
+
+		if err != nil {
 			rr.Probs = make(map[int64]RankingHighScoreData)
-		}else {
+		} else {
 			rr.Probs = mapStrToInt(detStrMap)
 		}
-        resulsts = append(resulsts, rr)
-    }
+		resulsts = append(resulsts, rr)
+	}
 
-    return &resulsts, err
+	return &resulsts, err
 }
 
 func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
@@ -231,15 +231,15 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 				var sid, score, time int64
 				err = rowsr.Scan(&sid, &score, &time)
 
-        	    rowsr.Close()
+				rowsr.Close()
 
 				if err != nil {
-        	        detMap[sm.Pid] = RankingHighScoreData{0, 0, 0}
+					detMap[sm.Pid] = RankingHighScoreData{0, 0, 0}
 				} else {
-        	        detMap[sm.Pid] = RankingHighScoreData{sid, score, time}
+					detMap[sm.Pid] = RankingHighScoreData{sid, score, time}
 				}
-			
-    	        var scoreSum, maxTime int64
+
+				var scoreSum, maxTime int64
 				for i := range detMap {
 					scoreSum += detMap[i].Score
 
@@ -247,10 +247,10 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 						maxTime = detMap[i].Time
 					}
 				}
-    	        totalScore = scoreSum
-	            totalTime = maxTime
+				totalScore = scoreSum
+				totalTime = maxTime
 			}
-    	} else {
+		} else {
 			if val.Score < sm.Score {
 				detMap[sm.Pid] = RankingHighScoreData{sm.Sid, sm.Score, sm.SubmitTime}
 
@@ -262,8 +262,8 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 						maxTime = detMap[i].Time
 					}
 				}
-                totalScore = scoreSum
-                totalTime = maxTime
+				totalScore = scoreSum
+				totalTime = maxTime
 			} else if val.Sid > sm.Sid {
 				if val.Score == sm.Score {
 					detMap[sm.Pid] = RankingHighScoreData{sm.Sid, sm.Score, sm.SubmitTime}
@@ -274,35 +274,35 @@ func (dm *DatabaseManager) ContestRankingUpdate(sm Submission) (rete error) {
 							maxTime = detMap[i].Time
 						}
 					}
-                    totalTime = maxTime
+					totalTime = maxTime
 				}
 			}
 		}
 	}
 
-    detStrMap = func() map[string]RankingHighScoreData {
+	detStrMap = func() map[string]RankingHighScoreData {
 		m := make(map[string]RankingHighScoreData)
 
 		for k, v := range detMap {
-            m[strconv.FormatInt(k, 10)] = v
+			m[strconv.FormatInt(k, 10)] = v
 		}
 
 		return m
 	}()
 
-    b, err := json.Marshal(detStrMap)
+	b, err := json.Marshal(detStrMap)
 
-    if err != nil {
-        panic(err)
-    }
+	if err != nil {
+		panic(err)
+	}
 
-  	_, err = tx.Exec("update contest_participation set score = ?, time = ?, details = ? where cid = ? and iid = ?", totalScore, totalTime, string(b), cp.Cid, sm.Iid)
-    
-    if err != nil {
-        panic(err)
-    }
+	_, err = tx.Exec("update contest_participation set score = ?, time = ?, details = ? where cid = ? and iid = ?", totalScore, totalTime, string(b), cp.Cid, sm.Iid)
 
-    return nil
+	if err != nil {
+		panic(err)
+	}
+
+	return nil
 }
 
 func (dm *DatabaseManager) ContestRankingCheckProblem(cid int64) (rete error) {
@@ -320,11 +320,11 @@ func (dm *DatabaseManager) ContestRankingCheckProblem(cid int64) (rete error) {
 		return err
 	}
 
-    probExists := make(map[int64]bool)
+	probExists := make(map[int64]bool)
 
-    for i := range *cps {
-        probExists[(*cps)[i].Pid] = true
-    }
+	for i := range *cps {
+		probExists[(*cps)[i].Pid] = true
+	}
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -341,7 +341,7 @@ func (dm *DatabaseManager) ContestRankingCheckProblem(cid int64) (rete error) {
 		panic(err)
 	}
 
-    defer rows.Close()
+	defer rows.Close()
 
 	var iid, totalScore, totalTime int64
 	var details string
@@ -358,62 +358,62 @@ func (dm *DatabaseManager) ContestRankingCheckProblem(cid int64) (rete error) {
 		}
 
 		return m
-    }
+	}
 
-    mapIntToStr := func(arg map[int64]RankingHighScoreData) map[string]RankingHighScoreData {
+	mapIntToStr := func(arg map[int64]RankingHighScoreData) map[string]RankingHighScoreData {
 		m := make(map[string]RankingHighScoreData)
 
 		for k, v := range arg {
-            m[strconv.FormatInt(k, 10)] = v
+			m[strconv.FormatInt(k, 10)] = v
 		}
 
 		return m
 	}
 
-    for rows.Next() {
-        err = rows.Scan(&iid, &totalScore, &totalTime, &details)
+	for rows.Next() {
+		err = rows.Scan(&iid, &totalScore, &totalTime, &details)
 
-        if err != nil {
-            panic(err)
-        }
+		if err != nil {
+			panic(err)
+		}
 
-        var detStrMap map[string]RankingHighScoreData
+		var detStrMap map[string]RankingHighScoreData
 
-	    err = json.Unmarshal([]byte(details), &detStrMap)
+		err = json.Unmarshal([]byte(details), &detStrMap)
 
-    	if err != nil {
-	    	panic(err)
-    	}
+		if err != nil {
+			panic(err)
+		}
 
-        detMap := mapStrToInt(detStrMap)
+		detMap := mapStrToInt(detStrMap)
 
-        totalScore = 0
-        totalTime = 0
-        for k, v := range detMap {
-            if _, has := probExists[k]; !has {
-                delete(detMap, k)
-            }
-            totalScore += v.Score
-            
-            if totalTime < v.Time {
-                totalTime = v.Time
-            }
-        }
+		totalScore = 0
+		totalTime = 0
+		for k, v := range detMap {
+			if _, has := probExists[k]; !has {
+				delete(detMap, k)
+			}
+			totalScore += v.Score
 
-        detStrMap = mapIntToStr(detMap)
+			if totalTime < v.Time {
+				totalTime = v.Time
+			}
+		}
 
-        b, err := json.Marshal(detStrMap)
+		detStrMap = mapIntToStr(detMap)
 
-        if err != nil {
-            panic(err)
-        }
+		b, err := json.Marshal(detStrMap)
 
-        _, err = tx.Exec("update contest_participation set score = ?, time = ?, details = ? where cid = ? and iid = ?", totalScore, totalTime, string(b), iid, cid)
-    
-        if err != nil {
-            panic(err)
-        }
-    }
+		if err != nil {
+			panic(err)
+		}
 
-    return nil
+		_, err = tx.Exec("update contest_participation set score = ?, time = ?, details = ? where cid = ? and iid = ?", totalScore, totalTime, string(b), iid, cid)
+
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return nil
 }

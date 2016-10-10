@@ -33,7 +33,7 @@ type JudgeTransfer struct {
 func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	auth, has := req.Header["Authentication"]
 
-	if !has || len(auth) == 0 || auth[0] != settings.JudgeKey {
+	if !has || len(auth) == 0 || auth[0] != settingManager.Get().JudgeKey {
 		rw.WriteHeader(http.StatusBadRequest)
 		rw.Write([]byte(BR400))
 
@@ -242,7 +242,7 @@ func (jt JudgeTransfer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 				if err != nil {
 					DBLog.Println(err)
 				}
-				
+
 				subs, err := mainDB.SubmissionFind(tr.Resp.Sid)
 
 				if err == nil {

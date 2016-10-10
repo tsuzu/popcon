@@ -3,13 +3,13 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"github.com/cs3238-tsuzu/popcon/file_manager"
+	"github.com/naoina/genmai"
 	"io/ioutil"
 	"os"
 	"strconv"
-	"time"
 	"strings"
-	"github.com/cs3238-tsuzu/popcon/file_manager"
-	"github.com/naoina/genmai"
+	"time"
 )
 
 // Database manager for Contest and Onlinejudge
@@ -71,27 +71,14 @@ func (dm *DatabaseManager) CreateSubmissionTable() error {
 	return nil
 }
 
-func (dm *DatabaseManager) SubmissionNew(pid, iid, lang int64, code string) (i int64, b error) {
-	tx, err := dm.db.DB().Begin()
-	
+func (dm *DatabaseManager) SubmissionAdd(pid, iid, lang int64, code string) (i int64, b error) {
+	res, err := dm.db.DB().Exec("insert into submission (pid, iid, lang, time, mem, score, submit_time, status, prog) values (?, ?, ?, ?, ?, ?, ?, ?, ?)", pid, iid, lang, 0, 0, 0, time.Now().Unix(), int64(InQueue), 0)
+
 	if err != nil {
 		return 0, err
 	}
 
-	res, err := tx.Exec("insert into submission (pid, iid, lang, time, mem, score, submit_time, status, prog) values (?, ?, ?, ?, ?, ?, ?, ?, ?)", pid, iid, lang, 0, 0, 0, time.Now().Unix(), int64(InQueue), 0)
-
-	if err != nil {
-		tx.Rollback()
-		return 0, err
-	}
-
-	id, err := res.LastInsertId()
-
-	if err != nil {
-		tx.Rollback()
-		return 0, err
-	}
-	tx.Commit()
+	id, _ := res.LastInsertId()
 
 	err = os.MkdirAll(SubmissionDir+strconv.FormatInt(id, 10), os.ModePerm)
 
@@ -215,7 +202,7 @@ func (dm *DatabaseManager) SubmissionUpdate(sid, time, mem int64, status Submiss
 	sm.Time = time
 	sm.Mem = mem
 	sm.Status = int64(status)
-	sm.Prog = uint64(fin) << 32 | uint64(all)
+	sm.Prog = uint64(fin)<<32 | uint64(all)
 	sm.Score = score
 
 	_, err = dm.db.Update(sm)
@@ -280,9 +267,9 @@ func (dm *DatabaseManager) SubmissionSetMsg(sid int64, msg string) error {
 
 type SubmissionTestCase struct {
 	Status SubmissionStatus
-	Name string
-	Time int64
-	Mem int64
+	Name   string
+	Time   int64
+	Mem    int64
 }
 
 func (dm *DatabaseManager) SubmissionGetCase(sid int64) (*map[int]SubmissionTestCase, error) {
@@ -296,7 +283,7 @@ func (dm *DatabaseManager) SubmissionGetCase(sid int64) (*map[int]SubmissionTest
 
 	defer fm.Close()
 
-	info, err := ioutil.ReadDir(SubmissionDir+strconv.FormatInt(sid, 10)+"/cases")
+	info, err := ioutil.ReadDir(SubmissionDir + strconv.FormatInt(sid, 10) + "/cases")
 
 	if err != nil {
 		return nil, err
@@ -309,8 +296,8 @@ func (dm *DatabaseManager) SubmissionGetCase(sid int64) (*map[int]SubmissionTest
 			if err != nil {
 				continue
 			}
-			
-			fp, err := os.Open(SubmissionDir+strconv.FormatInt(sid, 10) + "/cases/" + info[i].Name())
+
+			fp, err := os.Open(SubmissionDir + strconv.FormatInt(sid, 10) + "/cases/" + info[i].Name())
 
 			if err != nil {
 				continue
@@ -336,7 +323,7 @@ func (dm *DatabaseManager) SubmissionGetCase(sid int64) (*map[int]SubmissionTest
 }
 
 func (dm *DatabaseManager) SubmissionSetCase(sid int64, caseId int, stc SubmissionTestCase) error {
-	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/.cases_lock", os.O_WRONLY | os.O_CREATE | os.O_TRUNC, true)
+	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/.cases_lock", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, true)
 
 	if err != nil {
 		return err
@@ -344,7 +331,7 @@ func (dm *DatabaseManager) SubmissionSetCase(sid int64, caseId int, stc Submissi
 
 	defer fm.Close()
 
-	fp, err := os.Create(SubmissionDir+strconv.FormatInt(sid, 10)+"/cases/"+strconv.FormatInt(int64(caseId), 10))
+	fp, err := os.Create(SubmissionDir + strconv.FormatInt(sid, 10) + "/cases/" + strconv.FormatInt(int64(caseId), 10))
 
 	if err != nil {
 		return err
@@ -356,7 +343,7 @@ func (dm *DatabaseManager) SubmissionSetCase(sid int64, caseId int, stc Submissi
 }
 
 func (dm *DatabaseManager) SubmissionClearCase(sid int64) error {
-	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/.cases_lock", os.O_WRONLY | os.O_CREATE | os.O_TRUNC, true)
+	fm, err := FileManager.OpenFile(SubmissionDir+strconv.FormatInt(sid, 10)+"/.cases_lock", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, true)
 
 	if err != nil {
 		return err
@@ -364,7 +351,7 @@ func (dm *DatabaseManager) SubmissionClearCase(sid int64) error {
 
 	defer fm.Close()
 
-	err = os.RemoveAll(SubmissionDir+strconv.FormatInt(sid, 10)+"/cases/")
+	err = os.RemoveAll(SubmissionDir + strconv.FormatInt(sid, 10) + "/cases/")
 
 	if err != nil {
 		return err
@@ -374,63 +361,63 @@ func (dm *DatabaseManager) SubmissionClearCase(sid int64) error {
 }
 
 func (dm *DatabaseManager) SubmissionList(options ...*genmai.Condition) (*[]Submission, error) {
-    var resulsts []Submission
+	var resulsts []Submission
 
-    opt := make([]interface{}, len(options))
+	opt := make([]interface{}, len(options))
 
-    for i := range options {
-        opt[i] = options[i]
-    }
+	for i := range options {
+		opt[i] = options[i]
+	}
 
-    err := dm.db.Select(&resulsts, opt...)
+	err := dm.db.Select(&resulsts, opt...)
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    return &resulsts, nil
+	return &resulsts, nil
 }
 
 type SubmissionView struct {
 	SubmitTime int64
-	Cid int64
-	Pidx int64
-	Name string
-	Uid string
-	UserName string
-	Lang string
-	Score int64
-	Status string
-	Time int64
-	Mem int64
-	Sid int64
+	Cid        int64
+	Pidx       int64
+	Name       string
+	Uid        string
+	UserName   string
+	Lang       string
+	Score      int64
+	Status     string
+	Time       int64
+	Mem        int64
+	Sid        int64
 }
 
 func (dm *DatabaseManager) submissionViewQueryCreate(query string, cid, iid, lid, pidx, stat int64, order string, offset, limit int64) (*string, error) {
 	conditions := make([]string, 0, 5)
 
 	if cid != -1 {
-		conditions = append(conditions, "contest_problem.cid = " + strconv.FormatInt(cid, 10) + " ")
+		conditions = append(conditions, "contest_problem.cid = "+strconv.FormatInt(cid, 10)+" ")
 	}
 
 	if iid != -1 {
-		conditions = append(conditions, "user.iid = " + strconv.FormatInt(iid, 10) + " ")
+		conditions = append(conditions, "user.iid = "+strconv.FormatInt(iid, 10)+" ")
 	}
 
 	if pidx != -1 {
-        if cid == -1 {
-            return nil, errors.New("You must set cid to set pidx")
-        }
+		if cid == -1 {
+			return nil, errors.New("You must set cid to set pidx")
+		}
 
-		conditions = append(conditions, "contest_problem.pidx = " + strconv.FormatInt(pidx, 10) + " ")
+		conditions = append(conditions, "contest_problem.pidx = "+strconv.FormatInt(pidx, 10)+" ")
 	}
 
 	if lid != -1 {
-		conditions = append(conditions, "language.lid = " + strconv.FormatInt(lid, 10) + " ")
+		conditions = append(conditions, "language.lid = "+strconv.FormatInt(lid, 10)+" ")
 	}
 
 	if stat != -1 {
-		conditions = append(conditions, "submission.status = " + strconv.FormatInt(stat, 10) + " ")
+		conditions = append(conditions, "submission.status = "+strconv.FormatInt(stat, 10)+" ")
 	}
 
 	where := strings.Join(conditions, "and ")
@@ -439,64 +426,63 @@ func (dm *DatabaseManager) submissionViewQueryCreate(query string, cid, iid, lid
 		where = "where " + where
 	}
 
-    var lim string
-    if offset != -1 {
-        lim = "limit " + strconv.FormatInt(offset, 10)
-        if limit != -1 {
-            lim = lim + ", " + strconv.FormatInt(limit, 10)
-        }
-    }else {
-        if limit != -1 {
-            lim = "limit " + strconv.FormatInt(limit, 10)
-        }
-    }
+	var lim string
+	if offset != -1 {
+		lim = "limit " + strconv.FormatInt(offset, 10)
+		if limit != -1 {
+			lim = lim + ", " + strconv.FormatInt(limit, 10)
+		}
+	} else {
+		if limit != -1 {
+			lim = "limit " + strconv.FormatInt(limit, 10)
+		}
+	}
 
-    query += where + order + lim
+	query += where + order + lim
 
-    return &query, nil
+	return &query, nil
 }
 
 func (dm *DatabaseManager) SubmissionViewCount(cid, iid, lid, pidx, stat int64) (int64, error) {
-    queryBase := "select count(submission.sid) from submission inner join contest_problem on submission.pid = contest_problem.pid inner join user on submission.iid = user.iid inner join language on submission.lang = language.lid "
+	queryBase := "select count(submission.sid) from submission inner join contest_problem on submission.pid = contest_problem.pid inner join user on submission.iid = user.iid inner join language on submission.lang = language.lid "
 
-    query, err := dm.submissionViewQueryCreate(queryBase, cid, iid, lid, pidx, stat, "", -1, -1)
+	query, err := dm.submissionViewQueryCreate(queryBase, cid, iid, lid, pidx, stat, "", -1, -1)
 
-    if err != nil {
-        return 0, err
-    }
+	if err != nil {
+		return 0, err
+	}
 
-    rows, err := dm.db.DB().Query(*query)
+	rows, err := dm.db.DB().Query(*query)
 
-    if err != nil {
-        return 0, err
-    }
+	if err != nil {
+		return 0, err
+	}
 
 	defer rows.Close()
 
-    rows.Next()
+	rows.Next()
 
-    var cnt int64
-    err = rows.Scan(&cnt)
+	var cnt int64
+	err = rows.Scan(&cnt)
 
-    if err != nil {
-        return 0, err
-    }
+	if err != nil {
+		return 0, err
+	}
 
-
-    return cnt, err
+	return cnt, err
 }
 
 func (dm *DatabaseManager) SubmissionViewList(cid, iid, lid, pidx, stat, offset, limit int64) (*[]SubmissionView, error) {
 	queryBase := "select submission.submit_time, contest_problem.cid, contest_problem.pidx, contest_problem.name, user.uid, user.user_name, language.name, submission.score, submission.status, submission.prog, submission.time, submission.mem, submission.sid from submission inner join contest_problem on submission.pid = contest_problem.pid inner join user on submission.iid = user.iid inner join language on submission.lang = language.lid "
 
 	query, err := dm.submissionViewQueryCreate(queryBase, cid, iid, lid, pidx, stat, "order by submission.sid desc ", offset, limit)
-    
-    if err != nil {
-        return nil, err
-    }
 
-    rows, err := dm.db.DB().Query(*query)
-	
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := dm.db.DB().Query(*query)
+
 	if err != nil {
 		return nil, err
 	}
@@ -513,21 +499,21 @@ func (dm *DatabaseManager) SubmissionViewList(cid, iid, lid, pidx, stat, offset,
 		rows.Scan(&sv.SubmitTime, &sv.Cid, &sv.Pidx, &sv.Name, &sv.Uid, &sv.UserName, &sv.Lang, &sv.Score, &status, &prog, &sv.Time, &sv.Mem, &sv.Sid)
 
 		if status == int64(Judging) {
-            all := prog & ((uint64(1) << 32) - 1)
-            per := prog >> 32
+			all := prog & ((uint64(1) << 32) - 1)
+			per := prog >> 32
 
 			sv.Status = strconv.FormatInt(int64(per), 10) + "/" + strconv.FormatInt(int64(all), 10)
-		}else {
+		} else {
 			sv.Status = SubmissionStatusToString[SubmissionStatus(status)]
 		}
 
-        if status == int64(CompileError) || status == int64(InQueue) || status == int64(Judging) {
-            sv.Mem = -1
-            sv.Time = -1
-            sv.Score = -1
-        }
+		if status == int64(CompileError) || status == int64(InQueue) || status == int64(Judging) {
+			sv.Mem = -1
+			sv.Time = -1
+			sv.Score = -1
+		}
 
-        views = append(views, sv)
+		views = append(views, sv)
 	}
 
 	return &views, nil
@@ -536,14 +522,14 @@ func (dm *DatabaseManager) SubmissionViewList(cid, iid, lid, pidx, stat, offset,
 type SubmissionViewEach struct {
 	SubmissionView
 	HighlightType string
-    Iid int64
+	Iid           int64
 }
 
 func (dm *DatabaseManager) SubmissionViewFind(sid int64) (*SubmissionViewEach, error) {
 	query := "select submission.submit_time, contest_problem.cid, contest_problem.pidx, contest_problem.name, user.uid, user.user_name, language.name, submission.score, submission.status, submission.prog, submission.time, submission.mem, submission.sid, language.highlight_type, submission.iid from submission inner join contest_problem on submission.pid = contest_problem.pid inner join user on submission.iid = user.iid inner join language on submission.lang = language.lid where submission.sid = " + strconv.FormatInt(sid, 10)
 
-    rows, err := dm.db.DB().Query(query)
-	
+	rows, err := dm.db.DB().Query(query)
+
 	if err != nil {
 		return nil, err
 	}
@@ -551,11 +537,11 @@ func (dm *DatabaseManager) SubmissionViewFind(sid int64) (*SubmissionViewEach, e
 	defer rows.Close()
 
 	rows.Next()
-	
+
 	var sv SubmissionViewEach
 	var status int64
 	var prog uint64
-	
+
 	err = rows.Scan(&sv.SubmitTime, &sv.Cid, &sv.Pidx, &sv.Name, &sv.Uid, &sv.UserName, &sv.Lang, &sv.Score, &status, &prog, &sv.Time, &sv.Mem, &sv.Sid, &sv.HighlightType, &sv.Iid)
 
 	if err != nil {
@@ -563,19 +549,19 @@ func (dm *DatabaseManager) SubmissionViewFind(sid int64) (*SubmissionViewEach, e
 	}
 
 	if status == int64(Judging) {
-    	all := prog & ((uint64(1) << 32) - 1)
-        per := prog >> 32
+		all := prog & ((uint64(1) << 32) - 1)
+		per := prog >> 32
 
 		sv.Status = strconv.FormatInt(int64(per), 10) + "/" + strconv.FormatInt(int64(all), 10)
-	}else {
+	} else {
 		sv.Status = SubmissionStatusToString[SubmissionStatus(status)]
 	}
 
-    if status == int64(CompileError) || status == int64(InQueue) || status == int64(Judging) {
-        sv.Mem = -1
-        sv.Time = -1
-        sv.Score = -1
-    }
+	if status == int64(CompileError) || status == int64(InQueue) || status == int64(Judging) {
+		sv.Mem = -1
+		sv.Time = -1
+		sv.Score = -1
+	}
 
 	return &sv, nil
 }

@@ -7,12 +7,12 @@ import "strconv"
 // User is a struct to save UserData
 // "create table if not exists users (internalID int(11) auto_increment primary key, userID varchar(20) unique, userName varchar(256) unique, passHash varbinary(64), email varchar(50), groupID int(11))"
 type User struct {
-	Iid int64 `db:"pk"`
-	Uid     string `default:""`
-	UserName   string `default:""`
-	PassHash   []byte 
-	Email      string `default:""`
-	Gid  int64 `default:""`
+	Iid      int64  `db:"pk"`
+	Uid      string `default:""`
+	UserName string `default:""`
+	PassHash []byte
+	Email    string `default:""`
+	Gid      int64  `default:""`
 }
 
 func (dm *DatabaseManager) CreateUserTable() error {
@@ -25,7 +25,7 @@ func (dm *DatabaseManager) CreateUserTable() error {
 	dm.db.CreateUniqueIndex(&User{}, "uid")
 	dm.db.CreateUniqueIndex(&User{}, "user_name")
 	dm.db.CreateUniqueIndex(&User{}, "email")
-	
+
 	return err
 }
 
@@ -52,13 +52,13 @@ func (dm *DatabaseManager) UserAdd(userID string, userName string, pass string, 
 		return 0, errors.New("error: len(email) > 50")
 	}
 
-	return dm.db.Insert(&User{
-		Uid: userID,
-		UserName: userName,
-		PassHash: passHashArr[:],
-		Email: email,
-		Gid: groupID,
-	})
+	res, err := dm.db.DB().Exec("insert into user (uid, user_name, pass_hash, email, gid) values (?, ?, ?, ?, ?)", userID, userName, passHashArr[:], email, groupID)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return res.LastInsertId()
 }
 
 // UserUpdate is a function to add a new user
@@ -82,11 +82,11 @@ func (dm *DatabaseManager) UserUpdate(internalID int, userID string, userName st
 	}
 
 	_, err := dm.db.Update(&User{
-		Uid: userID,
+		Uid:      userID,
 		UserName: userName,
 		PassHash: passHashArr[:],
-		Email: email,
-		Gid: groupID,
+		Email:    email,
+		Gid:      groupID,
 	})
 
 	return err
@@ -98,7 +98,7 @@ func (dm *DatabaseManager) UserUpdate(internalID int, userID string, userName st
 func (dm *DatabaseManager) userFind(key string, value string) (*User, error) {
 	var resulsts []User
 	err := dm.db.Select(&resulsts, dm.db.Where(key, "=", value))
-	
+
 	if err != nil {
 		return nil, err
 	}

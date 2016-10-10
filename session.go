@@ -9,21 +9,21 @@ import "time"
 //"create table if not exists sessions (sessionKey varchar(50) primary key, internalID int(11), unixTimeLimit int(11), index iid(internalID), index idx(unixTimeLimit))"
 type Session struct {
 	SessionKey string `db:"pk" default:"" size:"50"`
-	Iid int64 `default:""`
-	TimeLimit int64 `default:""`
+	Iid        int64  `default:""`
+	TimeLimit  int64  `default:""`
 }
 
 type SessionTemplateData struct {
 	IsSignedIn bool
-	Iid int64
+	Iid        int64
 	UserID     string
 	UserName   string
-	Gid int64
+	Gid        int64
 }
 
-func (dm * DatabaseManager) CreateSessionTable() error {
+func (dm *DatabaseManager) CreateSessionTable() error {
 	err := dm.db.CreateTableIfNotExists(&Session{})
-	
+
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (dm *DatabaseManager) SessionAdd(internalID int64) (*string, error) {
 	for {
 		u := uuid.NewV4()
 		id := hex.EncodeToString(u[:])
-		session := Session{id, internalID, time.Now().Unix() + int64(720 * time.Hour)}
+		session := Session{id, internalID, time.Now().Unix() + int64(720*time.Hour)}
 
 		_, err = dm.db.Insert(&session)
 

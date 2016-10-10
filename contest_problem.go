@@ -1,14 +1,14 @@
 package main
 
 import (
-	"errors"
-	"time"
-	"strconv"
-	"os"
-    "github.com/cs3238-tsuzu/popcon/file_manager"
-	"io/ioutil"
 	"encoding/json"
+	"errors"
+	"github.com/cs3238-tsuzu/popcon/file_manager"
 	"github.com/naoina/genmai"
+	"io/ioutil"
+	"os"
+	"strconv"
+	"time"
 )
 
 const ContestProblemsDir = "./contest_problems/"
@@ -16,656 +16,648 @@ const ContestProblemsDir = "./contest_problems/"
 type JudgeType int
 
 const (
-    JudgePerfectMatch JudgeType = 0
-    JudgeRunningCode JudgeType = 1
+	JudgePerfectMatch JudgeType = 0
+	JudgeRunningCode  JudgeType = 1
 )
 
 type ContestProblem struct {
-    Pid int64 `db:"pk"`
-    Cid int64 `default:""`
-    Pidx int64 `default:""`
-    Name string `default:"" size:"256"`
-    Time int64 `default:""` // Second
-    Mem int64 `default:""` // MB
-    LastModified int64 `default:""`
-    Score int `default:""`
-    Type int `default:""`
+	Pid          int64  `db:"pk"`
+	Cid          int64  `default:""`
+	Pidx         int64  `default:""`
+	Name         string `default:"" size:"256"`
+	Time         int64  `default:""` // Second
+	Mem          int64  `default:""` // MB
+	LastModified int64  `default:""`
+	Score        int    `default:""`
+	Type         int    `default:""`
 }
 
 func (cp *ContestProblem) UpdateStatement(text string) error {
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/prob", os.O_WRONLY | os.O_CREATE | os.O_TRUNC, true)
+	fm, err := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/prob", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, true)
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    fm.Write([]byte(text))
+	fm.Write([]byte(text))
 
-    fm.Close()
+	fm.Close()
 
-    return nil
+	return nil
 }
 
 func (cp *ContestProblem) LoadStatement() (*string, error) {
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/prob", os.O_RDONLY | os.O_CREATE, false)
+	fm, err := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/prob", os.O_RDONLY|os.O_CREATE, false)
 
-    if err != nil {
-        return nil, err
-    }
-    defer fm.Close()
+	if err != nil {
+		return nil, err
+	}
+	defer fm.Close()
 
-    b, err := ioutil.ReadAll(fm)
+	b, err := ioutil.ReadAll(fm)
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    str := string(b)
+	str := string(b)
 
-    return &str, nil
+	return &str, nil
 }
 
 type TestCase struct {
-    Name string
-    Input string
-    Output string
+	Name   string
+	Input  string
+	Output string
 }
 
 type ScoreSet struct {
-    Cases []int `json:"cases"`
-    Score int `json:"score"`
+	Cases []int `json:"cases"`
+	Score int   `json:"score"`
 }
 
 type CheckerInterface struct {
-    Lid int64
-    Code string
+	Lid  int64
+	Code string
 }
 
 func (cp *ContestProblem) UpdateChecker(lid int64, code string) error {
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/checker", os.O_CREATE | os.O_WRONLY | os.O_TRUNC, true)
+	fm, err := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/checker", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, true)
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    defer fm.Close()
+	defer fm.Close()
 
-    b, err := json.Marshal(CheckerInterface{lid, code})
+	b, err := json.Marshal(CheckerInterface{lid, code})
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    _, err = fm.Write(b)
+	_, err = fm.Write(b)
 
-    return err
+	return err
 }
 
 func (cp *ContestProblem) LoadChecker() (int64, string, error) {
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/checker", os.O_RDONLY, false)
+	fm, err := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/checker", os.O_RDONLY, false)
 
-    if err != nil {
-        return 0, "", err
-    }
+	if err != nil {
+		return 0, "", err
+	}
 
-    defer fm.Close()
+	defer fm.Close()
 
-    b, err := ioutil.ReadAll(fm)
+	b, err := ioutil.ReadAll(fm)
 
-    if err != nil {
-        return 0, "", err
-    }
+	if err != nil {
+		return 0, "", err
+	}
 
-    if len(b) == 0 {
-        return 0, "", nil
-    }
+	if len(b) == 0 {
+		return 0, "", nil
+	}
 
-    var ci CheckerInterface
-    err = json.Unmarshal(b, &ci)
+	var ci CheckerInterface
+	err = json.Unmarshal(b, &ci)
 
-    if err != nil {
-        return 0, "", err
-    }
+	if err != nil {
+		return 0, "", err
+	}
 
-    return ci.Lid, ci.Code, nil
+	return ci.Lid, ci.Code, nil
 }
 
 func (cp *ContestProblem) UpdateTestCaseNames(cases []string, scores []ScoreSet) error {
-    scoreSum := 0
-    for i := range scores {
-        scoreSum += scores[i].Score
-    }
+	scoreSum := 0
+	for i := range scores {
+		scoreSum += scores[i].Score
+	}
 
-    cp.Score = scoreSum
-    err := mainDB.ContestProblemUpdate(*cp)
+	cp.Score = scoreSum
+	err := mainDB.ContestProblemUpdate(*cp)
 
-    if err != nil {
-        return err
-    }
-    
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/.cases_lock", os.O_CREATE | os.O_WRONLY, true)
+	if err != nil {
+		return err
+	}
 
-    if err != nil {
-        return err
-    }
+	fm, err := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/.cases_lock", os.O_CREATE|os.O_WRONLY, true)
 
-    defer fm.Close()
+	if err != nil {
+		return err
+	}
 
-    for i := 0; i < len(cases); i++ {
-        os.Rename(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(int64(i), 10) + "_in", "/tmp/popcon_" + strconv.FormatInt(cp.Pid, 10) + "_" + strconv.FormatInt(int64(i), 10) + "_in")
-        os.Rename(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(int64(i), 10) + "_out", "/tmp/popcon_" + strconv.FormatInt(cp.Pid, 10) + "_" + strconv.FormatInt(int64(i), 10) + "_out")
-    }
+	defer fm.Close()
 
-    defer func() {
-        for i := 0; i < len(cases); i++ {
-            os.Rename("/tmp/popcon_" + strconv.FormatInt(cp.Pid, 10) + "_" + strconv.FormatInt(int64(i), 10) + "_in", ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(int64(i), 10) + "_in")
-            os.Rename("/tmp/popcon_" + strconv.FormatInt(cp.Pid, 10) + "_" + strconv.FormatInt(int64(i), 10) + "_out", ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(int64(i), 10) + "_out")
-        }
-    }()
+	for i := 0; i < len(cases); i++ {
+		os.Rename(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/"+strconv.FormatInt(int64(i), 10)+"_in", "/tmp/popcon_"+strconv.FormatInt(cp.Pid, 10)+"_"+strconv.FormatInt(int64(i), 10)+"_in")
+		os.Rename(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/"+strconv.FormatInt(int64(i), 10)+"_out", "/tmp/popcon_"+strconv.FormatInt(cp.Pid, 10)+"_"+strconv.FormatInt(int64(i), 10)+"_out")
+	}
 
-    err = os.RemoveAll(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases")
+	defer func() {
+		for i := 0; i < len(cases); i++ {
+			os.Rename("/tmp/popcon_"+strconv.FormatInt(cp.Pid, 10)+"_"+strconv.FormatInt(int64(i), 10)+"_in", ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/"+strconv.FormatInt(int64(i), 10)+"_in")
+			os.Rename("/tmp/popcon_"+strconv.FormatInt(cp.Pid, 10)+"_"+strconv.FormatInt(int64(i), 10)+"_out", ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/"+strconv.FormatInt(int64(i), 10)+"_out")
+		}
+	}()
 
-    if err != nil {
-        return err
-    }
+	err = os.RemoveAll(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases")
 
-    err = os.MkdirAll(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases", os.ModePerm)
+	if err != nil {
+		return err
+	}
 
-    if err != nil {
-        return err
-    }
+	err = os.MkdirAll(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases", os.ModePerm)
 
-    fp, err := os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/data", os.O_CREATE | os.O_WRONLY | os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
 
-    if err != nil {
-        return err
-    }
+	fp, err := os.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/data", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 
-    defer fp.Close()
+	if err != nil {
+		return err
+	}
 
-    type TestCaseJson struct {
-        CaseNames map[string]string `json:"case_names"`
-        Scores []ScoreSet `json:"scores"`
-    }    
+	defer fp.Close()
 
-    var tcj TestCaseJson
+	type TestCaseJson struct {
+		CaseNames map[string]string `json:"case_names"`
+		Scores    []ScoreSet        `json:"scores"`
+	}
 
-    tcj.Scores = scores
-    tcj.CaseNames = make(map[string]string)
+	var tcj TestCaseJson
 
-    for i := range cases {
-        tcj.CaseNames[strconv.FormatInt(int64(i), 10)] = cases[i]
-    }
+	tcj.Scores = scores
+	tcj.CaseNames = make(map[string]string)
 
-    b, err := json.Marshal(tcj)
+	for i := range cases {
+		tcj.CaseNames[strconv.FormatInt(int64(i), 10)] = cases[i]
+	}
 
-    if err != nil {
-        return err
-    }
+	b, err := json.Marshal(tcj)
 
-    _, err = fp.Write(b)
+	if err != nil {
+		return err
+	}
 
-    if err != nil {
-        return err
-    }
+	_, err = fp.Write(b)
 
-    for i := 0; i < len(cases); i++ {
-        f, _ := os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(int64(i), 10) + "_in", os.O_CREATE | os.O_WRONLY | os.O_TRUNC, 0644)
-        
-        f.Close()
+	if err != nil {
+		return err
+	}
 
-        f, _ = os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(int64(i), 10) + "_out", os.O_CREATE | os.O_WRONLY | os.O_TRUNC, 0644)
-        
-        f.Close()
-    }
+	for i := 0; i < len(cases); i++ {
+		f, _ := os.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/"+strconv.FormatInt(int64(i), 10)+"_in", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 
-    return nil
+		f.Close()
+
+		f, _ = os.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/"+strconv.FormatInt(int64(i), 10)+"_out", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+
+		f.Close()
+	}
+
+	return nil
 }
 
 func (cp *ContestProblem) UpdateTestCase(isInput bool, caseID int, str string) error {
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/.cases_lock", os.O_CREATE | os.O_WRONLY | os.O_TRUNC, true)
+	fm, err := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/.cases_lock", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, true)
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    defer fm.Close()
+	defer fm.Close()
 
-    fileTag := "_in"
-    if !isInput {
-        fileTag = "_out"
-    }
+	fileTag := "_in"
+	if !isInput {
+		fileTag = "_out"
+	}
 
-    fp, err := os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(int64(caseID), 10) + fileTag, os.O_WRONLY | os.O_TRUNC, 0644)
+	fp, err := os.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/"+strconv.FormatInt(int64(caseID), 10)+fileTag, os.O_WRONLY|os.O_TRUNC, 0644)
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    defer fp.Close()
+	defer fp.Close()
 
-    _, err = fp.Write([]byte(str))
+	_, err = fp.Write([]byte(str))
 
-    return err
+	return err
 }
 
 func (cp *ContestProblem) LoadTestCase(isInput bool, caseID int) (string, error) {
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/.cases_lock", os.O_RDONLY, false)
+	fm, err := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/.cases_lock", os.O_RDONLY, false)
 
-    if err != nil {
-        return "", err
-    }
+	if err != nil {
+		return "", err
+	}
 
-    defer fm.Close()
+	defer fm.Close()
 
-    fileTag := "_in"
-    if !isInput {
-        fileTag = "_out"
-    }
+	fileTag := "_in"
+	if !isInput {
+		fileTag = "_out"
+	}
 
-    fp, err := os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(int64(caseID), 10) + fileTag, os.O_RDONLY, 0644)
+	fp, err := os.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/"+strconv.FormatInt(int64(caseID), 10)+fileTag, os.O_RDONLY, 0644)
 
-    if err != nil {
-        return "", err
-    }
+	if err != nil {
+		return "", err
+	}
 
-    defer fp.Close()
+	defer fp.Close()
 
-    b, err := ioutil.ReadAll(fp)
+	b, err := ioutil.ReadAll(fp)
 
-    if err != nil {
-        return "", nil
-    }
+	if err != nil {
+		return "", nil
+	}
 
-    return string(b), err
+	return string(b), err
 }
 
 func (cp *ContestProblem) LoadTestCases() (*[]TestCase, *[]ScoreSet, error) {
-    var scores []ScoreSet
-    var cases []TestCase
-    
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/.cases_lock", os.O_RDONLY, false)
+	var scores []ScoreSet
+	var cases []TestCase
 
-    if err != nil {
-        return nil, nil, err
-    }
+	fm, err := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/.cases_lock", os.O_RDONLY, false)
 
-    defer fm.Close()
+	if err != nil {
+		return nil, nil, err
+	}
 
-    fp, err := os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/data", os.O_RDONLY, 0644)
+	defer fm.Close()
 
-    if err != nil {
-        return &cases, &scores, nil
-    }
+	fp, err := os.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/data", os.O_RDONLY, 0644)
 
-    type TestCaseJson struct {
-        CaseNames map[string]string `json:"case_names"`
-        Scores []ScoreSet `json:"scores"`
-    }
+	if err != nil {
+		return &cases, &scores, nil
+	}
 
-    b, err := ioutil.ReadAll(fp)
+	type TestCaseJson struct {
+		CaseNames map[string]string `json:"case_names"`
+		Scores    []ScoreSet        `json:"scores"`
+	}
 
-    fp.Close()
+	b, err := ioutil.ReadAll(fp)
 
-    if err != nil {
-        return nil, nil, err
-    }
+	fp.Close()
 
-    var tcj TestCaseJson
+	if err != nil {
+		return nil, nil, err
+	}
 
-    err = json.Unmarshal(b, &tcj)
+	var tcj TestCaseJson
 
-    if err != nil {
-        return &cases, &scores, nil
-    }
+	err = json.Unmarshal(b, &tcj)
 
-    scores = tcj.Scores
-    
-    cases = make([]TestCase, len(tcj.CaseNames))
+	if err != nil {
+		return &cases, &scores, nil
+	}
 
-    for x := range tcj.CaseNames {
-        i, err := strconv.ParseInt(x, 10, 32)
+	scores = tcj.Scores
 
-        if err != nil {
-            return nil, nil, err
-        }
+	cases = make([]TestCase, len(tcj.CaseNames))
 
-        var tcase TestCase
-        fp, err := os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(i, 10) + "_in", os.O_RDONLY, 0644)
+	for x := range tcj.CaseNames {
+		i, err := strconv.ParseInt(x, 10, 32)
 
-        if err != nil {
-            return nil, nil, err
-        }
+		if err != nil {
+			return nil, nil, err
+		}
 
-        b, err := ioutil.ReadAll(fp)
+		var tcase TestCase
+		fp, err := os.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/"+strconv.FormatInt(i, 10)+"_in", os.O_RDONLY, 0644)
 
-        if err != nil {
-            return nil, nil, err
-        }
+		if err != nil {
+			return nil, nil, err
+		}
 
-        tcase.Input = string(b)
+		b, err := ioutil.ReadAll(fp)
 
-        fp.Close()
+		if err != nil {
+			return nil, nil, err
+		}
 
-        fp, err = os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(i, 10) + "_out", os.O_RDONLY, 0644)
+		tcase.Input = string(b)
 
-        if err != nil {
-            return nil, nil, err
-        }
+		fp.Close()
 
-        b, err = ioutil.ReadAll(fp)
+		fp, err = os.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/"+strconv.FormatInt(i, 10)+"_out", os.O_RDONLY, 0644)
 
+		if err != nil {
+			return nil, nil, err
+		}
 
-        if err != nil {
-            return nil, nil, err
-        }
+		b, err = ioutil.ReadAll(fp)
 
-        tcase.Output = string(b)
+		if err != nil {
+			return nil, nil, err
+		}
 
-        tcase.Name = tcj.CaseNames[x]
+		tcase.Output = string(b)
 
-        fp.Close()
+		tcase.Name = tcj.CaseNames[x]
 
-        cases[i] = tcase
-    }
+		fp.Close()
 
-    return &cases, &scores, nil
+		cases[i] = tcase
+	}
+
+	return &cases, &scores, nil
 }
 
 func (cp *ContestProblem) LoadTestCaseInfo(caseId int) (int64, int64, error) {
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/.cases_lock", os.O_RDONLY, false)
+	fm, err := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/.cases_lock", os.O_RDONLY, false)
 
-    if err != nil {
-        return 0, 0, err
-    }
+	if err != nil {
+		return 0, 0, err
+	}
 
-    defer fm.Close()
+	defer fm.Close()
 
-    fp, err := os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(int64(caseId), 10) + "_in", os.O_RDONLY, 0644)
+	fp, err := os.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/"+strconv.FormatInt(int64(caseId), 10)+"_in", os.O_RDONLY, 0644)
 
-    if err != nil {
-        return 0, 0, err
-    }
+	if err != nil {
+		return 0, 0, err
+	}
 
-    defer fp.Close()
+	defer fp.Close()
 
-    fi, err := fp.Stat()
+	fi, err := fp.Stat()
 
-    if err != nil {
-        return 0, 0, err
-    }
+	if err != nil {
+		return 0, 0, err
+	}
 
-    in := fi.Size()
+	in := fi.Size()
 
-    fp.Close()
+	fp.Close()
 
-    fp, err = os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/" + strconv.FormatInt(int64(caseId), 10) + "_out", os.O_RDONLY, 0644)
+	fp, err = os.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/"+strconv.FormatInt(int64(caseId), 10)+"_out", os.O_RDONLY, 0644)
 
-    if err != nil {
-        return 0, 0, err
-    }
+	if err != nil {
+		return 0, 0, err
+	}
 
-    fi, err = fp.Stat()
+	fi, err = fp.Stat()
 
-    if err != nil {
-        return 0, 0, err
-    }
+	if err != nil {
+		return 0, 0, err
+	}
 
-    out := fi.Size()
+	out := fi.Size()
 
-    return in, out , nil
+	return in, out, nil
 }
 
 func (cp *ContestProblem) LoadTestCaseNames() (*[]string, *[]ScoreSet, error) {
-    var scores []ScoreSet
-    var cases []string
-    
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/.cases_lock", os.O_RDONLY, false)
+	var scores []ScoreSet
+	var cases []string
 
-    if err != nil {
-        return nil, nil, err
-    }
+	fm, err := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/.cases_lock", os.O_RDONLY, false)
 
-    defer fm.Close()
+	if err != nil {
+		return nil, nil, err
+	}
 
-    fp, err := os.OpenFile(ContestProblemsDir + strconv.FormatInt(cp.Pid, 10) + "/cases/data", os.O_RDONLY, 0644)
+	defer fm.Close()
 
-    if err != nil {
-        return &cases, &scores, nil
-    }
+	fp, err := os.OpenFile(ContestProblemsDir+strconv.FormatInt(cp.Pid, 10)+"/cases/data", os.O_RDONLY, 0644)
 
-    type TestCaseJson struct {
-        CaseNames map[string]string `json:"case_names"`
-        Scores []ScoreSet `json:"scores"`
-    }
+	if err != nil {
+		return &cases, &scores, nil
+	}
 
-    b, err := ioutil.ReadAll(fp)
+	type TestCaseJson struct {
+		CaseNames map[string]string `json:"case_names"`
+		Scores    []ScoreSet        `json:"scores"`
+	}
 
-    fp.Close()
+	b, err := ioutil.ReadAll(fp)
 
-    if err != nil {
-        return nil, nil, err
-    }
+	fp.Close()
 
-    var tcj TestCaseJson
+	if err != nil {
+		return nil, nil, err
+	}
 
-    err = json.Unmarshal(b, &tcj)
+	var tcj TestCaseJson
 
-    if err != nil {
-        return &cases, &scores, nil
-    }
+	err = json.Unmarshal(b, &tcj)
 
-    scores = tcj.Scores
-    
-    cases = make([]string, len(tcj.CaseNames))
+	if err != nil {
+		return &cases, &scores, nil
+	}
 
-    for x := range tcj.CaseNames {
-        i, err := strconv.ParseInt(x, 10, 32)
+	scores = tcj.Scores
 
-        if err != nil {
-            return nil, nil, err
-        }
+	cases = make([]string, len(tcj.CaseNames))
 
-        cases[i] = tcj.CaseNames[x]
-    }
-    return &cases, &scores, nil
+	for x := range tcj.CaseNames {
+		i, err := strconv.ParseInt(x, 10, 32)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		cases[i] = tcj.CaseNames[x]
+	}
+	return &cases, &scores, nil
 }
 
 func (dm *DatabaseManager) CreateContestProblemTable() error {
-    err := dm.db.CreateTableIfNotExists(&ContestProblem{})
+	err := dm.db.CreateTableIfNotExists(&ContestProblem{})
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    dm.db.CreateIndex(&ContestProblem{}, "cid")
-    dm.db.CreateIndex(&ContestProblem{}, "pidx")
-    dm.db.CreateUniqueIndex(&ContestProblem{}, "pidx", "cid")
+	dm.db.CreateIndex(&ContestProblem{}, "cid")
+	dm.db.CreateIndex(&ContestProblem{}, "pidx")
+	dm.db.CreateUniqueIndex(&ContestProblem{}, "pidx", "cid")
 
-    return nil
+	return nil
 }
 
-func (dm *DatabaseManager) ContestProblemNew(cid, pidx int64, name string, timel, mem int64, jtype JudgeType) (int64, error) {
-    prob := ContestProblem{
-        Cid: cid,
-        Pidx: pidx,
-        Name: name,
-        Time: timel,
-        Mem: mem,
-        LastModified: time.Now().Unix(),
-        Type: int(jtype),
-    }
+func (dm *DatabaseManager) ContestProblemAdd(cid, pidx int64, name string, timeLimit, mem int64, jtype JudgeType) (int64, error) {
+	res, err := dm.db.DB().Exec("insert into contest_problem (cid, pidx, name, time, mem, last_modified, type) values (?, ?, ?, ?, ?, ?, ?)", cid, pidx, name, timeLimit, mem, time.Now().Unix(), int(jtype))
 
-    _, err := dm.db.Insert(&prob)
+	if err != nil {
+		return 0, err
+	}
 
-    i := prob.Pid
+	id, _ := res.LastInsertId()
 
-    if err != nil {
-        return 0, err
-    }
+	if err != nil {
+		return 0, err
+	}
 
-    err = os.MkdirAll(ContestProblemsDir + strconv.FormatInt(i, 10) + "/cases/", os.ModePerm)
+	err = os.MkdirAll(ContestProblemsDir+strconv.FormatInt(id, 10)+"/cases/", os.ModePerm)
 
-    if err != nil {
-        dm.ContestProblemDelete(i)
+	if err != nil {
+		dm.ContestProblemDelete(id)
 
-        return 0, err
-    }
+		return 0, err
+	}
 
-    fm, err := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(i, 10) + "/.cases_lock", os.O_WRONLY | os.O_CREATE, true)
+	fm, err := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(id, 10)+"/.cases_lock", os.O_WRONLY|os.O_CREATE, true)
 
-    if err != nil {
-        dm.ContestProblemDelete(i)
+	if err != nil {
+		dm.ContestProblemDelete(id)
 
-        return 0, err
-    }
+		return 0, err
+	}
 
-    fm.Close()
+	fm.Close()
 
-    fm, err = FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(i, 10) + "/checker", os.O_WRONLY | os.O_CREATE, true)
+	fm, err = FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(id, 10)+"/checker", os.O_WRONLY|os.O_CREATE, true)
 
-    if err != nil {
-        dm.ContestProblemDelete(i)
+	if err != nil {
+		dm.ContestProblemDelete(id)
 
-        return 0, err
-    }
+		return 0, err
+	}
 
-    fm.Close()
+	fm.Close()
 
-    fm, err = FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(i, 10) + "/prob", os.O_WRONLY | os.O_CREATE, true)
+	fm, err = FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(id, 10)+"/prob", os.O_WRONLY|os.O_CREATE, true)
 
+	if err != nil {
+		dm.ContestProblemDelete(id)
 
-    if err != nil {
-        dm.ContestProblemDelete(i)
+		return 0, err
+	}
 
-        return 0, err
-    }
+	fm.Close()
 
-    fm.Close()
-
-    return i, err
+	return id, err
 }
 
 func (dm *DatabaseManager) ContestProblemUpdate(prob ContestProblem) error {
-    _, err := dm.db.Update(&prob)
+	_, err := dm.db.Update(&prob)
 
-    return err
+	return err
 }
 
 func (dm *DatabaseManager) ContestProblemDelete(pid int64) error {
-    prob := ContestProblem{ Pid: pid }
+	timeLimit := ContestProblem{Pid: pid}
 
-    _, err := dm.db.Delete(&prob)
+	_, err := dm.db.Delete(&timeLimit)
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    fm1, _ := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(pid, 10) + "/prob.txt", os.O_WRONLY | os.O_CREATE, true)
-    fm2, _ := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(pid, 10) + "/.cases_lock", os.O_WRONLY | os.O_CREATE, true)
-    fm3, _ := FileManager.OpenFile(ContestProblemsDir + strconv.FormatInt(pid, 10) + "/checker", os.O_WRONLY | os.O_CREATE, true)
+	fm1, _ := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(pid, 10)+"/prob.txt", os.O_WRONLY|os.O_CREATE, true)
+	fm2, _ := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(pid, 10)+"/.cases_lock", os.O_WRONLY|os.O_CREATE, true)
+	fm3, _ := FileManager.OpenFile(ContestProblemsDir+strconv.FormatInt(pid, 10)+"/checker", os.O_WRONLY|os.O_CREATE, true)
 
-    defer func() {
-        if fm1 != nil {
-            fm1.Close()
-        }
-        if fm2 != nil {
-            fm2.Close()
-        }
-        if fm3 != nil {
-            fm3.Close()
-        }
-    }()
+	defer func() {
+		if fm1 != nil {
+			fm1.Close()
+		}
+		if fm2 != nil {
+			fm2.Close()
+		}
+		if fm3 != nil {
+			fm3.Close()
+		}
+	}()
 
-    err = os.RemoveAll(ContestProblemsDir + strconv.FormatInt(pid, 10))
+	err = os.RemoveAll(ContestProblemsDir + strconv.FormatInt(pid, 10))
 
-    return err
+	return err
 }
 
 func (dm *DatabaseManager) ContestProblemFind(pid int64) (*ContestProblem, error) {
-    var resulsts []ContestProblem
+	var resulsts []ContestProblem
 
-    err := dm.db.Select(&resulsts, dm.db.Where("pid", "=", pid))
+	err := dm.db.Select(&resulsts, dm.db.Where("pid", "=", pid))
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    if len(resulsts) == 0 {
-        return nil, errors.New("Unknown problem")
-    }
+	if len(resulsts) == 0 {
+		return nil, errors.New("Unknown problem")
+	}
 
-    return &resulsts[0], nil
+	return &resulsts[0], nil
 }
 
 func (dm *DatabaseManager) ContestProblemFind2(cid, pidx int64) (*ContestProblem, error) {
-    var resulsts []ContestProblem
+	var resulsts []ContestProblem
 
-    err := dm.db.Select(&resulsts, dm.db.Where("pidx", "=", pidx).And("cid", "=", cid))
+	err := dm.db.Select(&resulsts, dm.db.Where("pidx", "=", pidx).And("cid", "=", cid))
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    if len(resulsts) == 0 {
-        return nil, errors.New("Unknown problem")
-    }
+	if len(resulsts) == 0 {
+		return nil, errors.New("Unknown problem")
+	}
 
-    return &resulsts[0], nil
+	return &resulsts[0], nil
 }
 
 func (dm *DatabaseManager) ContestProblemList(cid int64) (*[]ContestProblem, error) {
-    var results []ContestProblem
+	var results []ContestProblem
 
-    err := dm.db.Select(&results, dm.db.Where("cid", "=", cid), dm.db.OrderBy("pidx", genmai.ASC))
+	err := dm.db.Select(&results, dm.db.Where("cid", "=", cid), dm.db.OrderBy("pidx", genmai.ASC))
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    return &results, nil
+	return &results, nil
 }
 
 func (dm *DatabaseManager) ContestProblemCount(cid int64) (int64, error) {
-    var count int64    
+	var count int64
 
-    // COUNT(*)が重い
-    err := dm.db.Select(&count, dm.db.Count("pid"), dm.db.From(&ContestProblem{}), dm.db.Where("cid", "=", cid))
+	// COUNT(*)が重い
+	err := dm.db.Select(&count, dm.db.Count("pid"), dm.db.From(&ContestProblem{}), dm.db.Where("cid", "=", cid))
 
-    if err != nil {
-        return 0, err
-    }
-    
-    return count , nil
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }
 
 type ContestProblemLight struct {
-    Pidx int64
-    Name string
+	Pidx int64
+	Name string
 }
 
 func (dm *DatabaseManager) ContestProblemListLight(cid int64) (*[]ContestProblemLight, error) {
-    results := make([]ContestProblemLight, 0, 50)
+	results := make([]ContestProblemLight, 0, 50)
 
-    rows, err := dm.db.DB().Query("select pidx, name from contest_problem where cid = ?", cid)
+	rows, err := dm.db.DB().Query("select pidx, name from contest_problem where cid = ?", cid)
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    for rows.Next() {
-        var cpl ContestProblemLight
+	for rows.Next() {
+		var cpl ContestProblemLight
 
-        rows.Scan(&cpl.Pidx, &cpl.Name)
+		rows.Scan(&cpl.Pidx, &cpl.Name)
 
-        results = append(results, cpl)
-    }
+		results = append(results, cpl)
+	}
 
-    return &results, nil
+	return &results, nil
 }
 
 func (dm *DatabaseManager) ContestProblemRemoveAll(cid int64) error {
-    _, err := dm.db.DB().Exec("delete from contest_problem where cid = ?", cid)
+	_, err := dm.db.DB().Exec("delete from contest_problem where cid = ?", cid)
 
-    return err
+	return err
 }

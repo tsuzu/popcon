@@ -1,27 +1,17 @@
 package main
 
 import (
-	"net/http"
+	"encoding/json"
+	"flag"
+	"fmt"
 	gorilla "github.com/gorilla/handlers"
 	"github.com/sebest/xff"
-	"flag"
+	"net/http"
 	"os"
-	"encoding/json"
-	"fmt"
 )
 
-type Settings struct {
-	ReCAPTCHASite string
-	ReCAPTCHASecret string
-	AddUser bool
-	CreateContest bool
-	DB string
-	JudgeKey string
-}
-var settings Settings
-
 func main() {
-	setting := flag.String("setting", "./popcon.json", "the path to setting file")
+	settingFile := flag.String("setting", "./popcon.json", "the path to setting file")
 	help := flag.Bool("help", false, "Show help")
 
 	flag.Parse()
@@ -32,10 +22,10 @@ func main() {
 		return
 	}
 
-	fp, err := os.OpenFile(*setting, os.O_RDONLY, 0664)
+	fp, err := os.OpenFile(*settingFile, os.O_RDONLY, 0664)
 
 	if err != nil {
-		b, _ := json.Marshal(Settings{})
+		b, _ := json.Marshal(Setting{})
 
 		fmt.Println("Json Sample: ", string(b))
 
@@ -44,13 +34,16 @@ func main() {
 
 	dec := json.NewDecoder(fp)
 
-	err = dec.Decode(&settings)
+	var setting Setting
+	err = dec.Decode(&setting)
 
 	if err != nil {
 		fmt.Println("Syntax error: ", err)
 
 		return
 	}
+
+	settingManager.Set(setting)
 
 	lo, err := CreateLogOut()
 

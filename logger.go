@@ -16,15 +16,15 @@ func (lo LogOut) Write(p []byte) (n int, err error) {
 	fmt.Print(string(p))
 
 	if lo.fp != nil {
-        lo.fp.Write(p)
-    }
+		lo.fp.Write(p)
+	}
 
 	return len(p), nil
 }
 
 func CreateLogOut() (*LogOut, error) {
-    var fp *os.File
-    var err error
+	var fp *os.File
+	var err error
 
 	//fp, err = os.OpenFile("./log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 
@@ -32,6 +32,6 @@ func CreateLogOut() (*LogOut, error) {
 }
 
 func CreateLogger(writer io.Writer) {
-    HttpLog = log.New(writer, "popcon: ", log.LstdFlags | log.Llongfile)
-    DBLog =  log.New(writer, "mysql: ", log.LstdFlags | log.Llongfile)
+	HttpLog = log.New(writer, "popcon: ", log.LstdFlags|log.Llongfile)
+	DBLog = log.New(writer, "mysql: ", log.LstdFlags|log.Llongfile)
 }

@@ -7,8 +7,8 @@ import "github.com/naoina/genmai"
 // "create table if not exists news (text varchar(256), unixTime int, index uti(unixTime))"
 // News contains news showed on "/"
 type News struct {
-	Text     string    `default:""`
-	UnixTime int64 `default:"" size:"1024"`
+	Text     string `default:""`
+	UnixTime int64  `default:"" size:"1024"`
 }
 
 func (dm *DatabaseManager) CreateNewsTable() error {
