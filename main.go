@@ -15,7 +15,7 @@ import (
 func CreateDefaultAdminUser() bool {
 	fmt.Println("No user found in the DB")
 	fmt.Println("You need to create the default admin")
-	var id, name, email, pass string
+	var id, name, email, pass, pass2 string
 
 	fmt.Print("User ID: ")
 	_, err := fmt.Scan(&id)
@@ -38,13 +38,26 @@ func CreateDefaultAdminUser() bool {
 		return false
 	}
 
+	fmt.Print("Password (hidden): ")
 	passArr, err := terminal.ReadPassword(int(syscall.Stdin))
 
 	if err != nil {
 		return false
 	}
 
+	fmt.Print("Password (confirmation): ")
+	passArr2, err := terminal.ReadPassword(int(syscall.Stdin))
+
+	if err != nil {
+		return false
+	}
+
 	pass = string(passArr)
+	pass2 = string(passArr2)
+
+	if pass != pass2 {
+		return false
+	}
 
 	_, err = mainDB.UserAdd(id, name, pass, email, 0)
 
