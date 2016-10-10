@@ -28,7 +28,7 @@ type ContestProblem struct {
 	Time         int64  `default:""` // Second
 	Mem          int64  `default:""` // MB
 	LastModified int64  `default:""`
-	Score        int    `default:""`
+	Score        int    `default:"0"`
 	Type         int    `default:""`
 }
 
