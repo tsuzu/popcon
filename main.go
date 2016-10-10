@@ -6,9 +6,9 @@ import (
 	"fmt"
 	gorilla "github.com/gorilla/handlers"
 	"github.com/sebest/xff"
+	"golang.org/x/crypto/ssh/terminal"
 	"net/http"
 	"os"
-	"golang.org/x/crypto/ssh/terminal"
 	"syscall"
 )
 
@@ -128,7 +128,7 @@ func main() {
 	CreateLogger(lo)
 	go SJQueue.run()
 
-	userCnt, err :=  mainDB.UserCount()
+	userCnt, err := mainDB.UserCount()
 
 	if err != nil {
 		DBLog.Println("Failed to count the users", err.Error())
@@ -143,7 +143,7 @@ func main() {
 			return
 		}
 	}
-	
+
 	mux := http.NewServeMux()
 	handlers, err := CreateHandlers()
 
@@ -173,7 +173,7 @@ func main() {
 
 	// Should use TLS
 	server := http.Server{
-		Addr:           ":80",
+		Addr:           settingManager.Get().ListenEndpoint,
 		MaxHeaderBytes: 1 << 20,
 		Handler:        xssProtector,
 	}
