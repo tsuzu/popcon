@@ -44,6 +44,7 @@ func CreateDefaultAdminUser() bool {
 	if err != nil {
 		return false
 	}
+	fmt.Println()
 
 	fmt.Print("Password (confirmation): ")
 	passArr2, err := terminal.ReadPassword(int(syscall.Stdin))
@@ -51,11 +52,14 @@ func CreateDefaultAdminUser() bool {
 	if err != nil {
 		return false
 	}
+	fmt.Println()
 
 	pass = string(passArr)
 	pass2 = string(passArr2)
 
 	if pass != pass2 {
+		fmt.Println("Different password")
+
 		return false
 	}
 
@@ -139,7 +143,7 @@ func main() {
 			return
 		}
 	}
-
+	
 	mux := http.NewServeMux()
 	handlers, err := CreateHandlers()
 
