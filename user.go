@@ -124,3 +124,11 @@ func (dm *DatabaseManager) UserFindFromUserID(userID string) (*User, error) {
 	return dm.userFind("uid", userID)
 
 }
+
+func (dm *DatabaseManager) UserCount() (int64, error) {
+	var count int64
+
+	err := dm.db.Select(&count, dm.db.Count("iid"), dm.db.From(&User{}));
+
+	return count, err
+}

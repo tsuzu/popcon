@@ -89,7 +89,7 @@ const RETL413 = `
 </head>
 <body>
 <h1>Request Entity Too Large</h1>
-Your file is too large.(<=10MB)
+Your file is too large.(>10MB)
 </body>
 </html>
 `

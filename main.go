@@ -8,7 +8,54 @@ import (
 	"github.com/sebest/xff"
 	"net/http"
 	"os"
+	"golang.org/x/crypto/ssh/terminal"
+	"syscall"
 )
+
+func CreateDefaultAdminUser() bool {
+	fmt.Println("No user found in the DB")
+	fmt.Println("You need to create the default admin")
+	var id, name, email, pass string
+
+	fmt.Print("User ID: ")
+	_, err := fmt.Scan(&id)
+
+	if len(id) == 0 || err != nil {
+		return false
+	}
+
+	fmt.Print("User Name: ")
+	_, err = fmt.Scan(&name)
+
+	if len(name) == 0 || err != nil {
+		return false
+	}
+
+	fmt.Print("Email: ")
+	_, err = fmt.Scan(&email)
+
+	if len(email) == 0 || err != nil {
+		return false
+	}
+
+	passArr, err := terminal.ReadPassword(int(syscall.Stdin))
+
+	if err != nil {
+		return false
+	}
+
+	pass = string(passArr)
+
+	_, err = mainDB.UserAdd(id, name, pass, email, 0)
+
+	if err != nil {
+		fmt.Println("Failed to create user. (", err.Error(), ")")
+
+		return false
+	}
+
+	return true
+}
 
 func main() {
 	settingFile := flag.String("setting", "./popcon.json", "the path to setting file")
@@ -63,6 +110,22 @@ func main() {
 	SJQueue = CreateSubmissionJudgeQueue()
 	CreateLogger(lo)
 	go SJQueue.run()
+
+	userCnt, err :=  mainDB.UserCount()
+
+	if err != nil {
+		DBLog.Println("Failed to count the users", err.Error())
+
+		return
+	}
+
+	if userCnt == 0 {
+		if !CreateDefaultAdminUser() {
+			DBLog.Println("failed.")
+
+			return
+		}
+	}
 
 	mux := http.NewServeMux()
 	handlers, err := CreateHandlers()
