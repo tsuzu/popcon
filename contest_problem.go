@@ -485,7 +485,7 @@ func (dm *DatabaseManager) CreateContestProblemTable() error {
 }
 
 func (dm *DatabaseManager) ContestProblemAdd(cid, pidx int64, name string, timeLimit, mem int64, jtype JudgeType) (int64, error) {
-	res, err := dm.db.DB().Exec("insert into contest_problem (cid, pidx, name, time, mem, last_modified, type) values (?, ?, ?, ?, ?, ?, ?)", cid, pidx, name, timeLimit, mem, time.Now().Unix(), int(jtype))
+	res, err := dm.db.DB().Exec("insert into contest_problem (cid, pidx, name, time, mem, last_modified, score, type) values (?, ?, ?, ?, ?, ?, ?, ?)", cid, pidx, name, timeLimit, mem, time.Now().Unix(), 0, int(jtype))
 
 	if err != nil {
 		return 0, err
