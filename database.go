@@ -44,7 +44,6 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 	// user_and_group.go
 	// Create Users Table
 	err = dm.CreateUserTable()
-	//_, err = dm.db.Exec("create table if not exists users (internalID int(11) auto_increment primary key, userID varchar(20) unique, userName varchar(256) unique, passHash varbinary(64), email varchar(50), groupID int(11))")
 
 	if err != nil {
 		return nil, err
@@ -53,7 +52,6 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 	// session.go
 	// Create Sessions Table
 	err = dm.CreateSessionTable()
-	//_, err = dm.db.Exec("create table if not exists sessions (sessionID varchar(50) primary key, internalID int(11), unixTimeLimit int(11), index iid(internalID), index idx(unixTimeLimit))")
 
 	if err != nil {
 		return nil, err

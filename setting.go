@@ -11,7 +11,7 @@ type Setting struct {
 	CanCreateContestByNotAdmin bool
 	DB                         string
 	JudgeKey                   string
-	ListenEndpoint             string
+	ListeningEndpoint          string
 }
 
 type SettingManager struct {

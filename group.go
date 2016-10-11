@@ -22,12 +22,12 @@ func (dm *DatabaseManager) CreateGroupTable() error {
 
 // GroupAdd adds a new group
 // len(groupName) <= 50
-func (dm *DatabaseManager) GroupAdd(groupName string) (int64, error) {
-	if len(groupName) > 50 {
+func (dm *DatabaseManager) GroupAdd(name string) (int64, error) {
+	if len(name) > 50 {
 		return 0, errors.New("len(groupName) > 50")
 	}
 
-	res, err := dm.db.DB().Exec("insert into group (name) values (?)", groupName)
+	res, err := dm.db.DB().Exec("insert into group (name) values (?)", name)
 
 	if err != nil {
 		return 0, err
@@ -37,7 +37,7 @@ func (dm *DatabaseManager) GroupAdd(groupName string) (int64, error) {
 }
 
 // GroupFind finds a group with groupID
-func (dm *DatabaseManager) GroupFind(gid int) (*Group, error) {
+func (dm *DatabaseManager) GroupFind(gid int64) (*Group, error) {
 	var resulsts []Group
 
 	err := dm.db.Select(&resulsts, dm.db.Where("gid", "=", gid))

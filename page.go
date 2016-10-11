@@ -53,40 +53,13 @@ func TimeToString(t int64) string {
 	return time.Unix(t, 0).Format("2006/01/02 15:04:05")
 }
 
-// PageHandlerFuncType is a type of the function used in PageHandler
-type PageHandlerFuncType func(http.ResponseWriter, *http.Request)
-
-// PageHandler a handler for each page
-type PageHandler struct {
-	Callback PageHandlerFuncType
-}
-
-// PassHandler is a function that pass a handler
-func (ph *PageHandler) PassHandler() func(http.ResponseWriter, *http.Request) {
-	return ph.Callback
-}
-
-// FuncHandlerWrapepr is for FuncToHandler
-type FuncHandlerWrapepr struct {
-	f func(http.ResponseWriter, *http.Request)
-}
-
-func (fhw FuncHandlerWrapepr) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	fhw.f(rw, req)
-}
-
-// FuncToHandler wraps functions as a handler
-func FuncToHandler(f func(http.ResponseWriter, *http.Request)) FuncHandlerWrapepr {
-	return FuncHandlerWrapepr{f}
-}
-
 // CreateHandlers is a function to return hadlers
-func CreateHandlers() (*map[string]*PageHandler, error) {
-	res := make(map[string]*PageHandler)
+func CreateHandlers() (*map[string]*http.HandlerFunc, error) {
+	res := make(map[string]*http.HandlerFunc)
 
 	var err error
 
-	res["/"], err = func() (*PageHandler, error) {
+	res["/"], err = func() (*http.HandlerFunc, error) {
 		funcs := template.FuncMap{
 			"timeToString": TimeToString,
 		}
@@ -103,7 +76,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 			return nil, errors.New("Failed to load ./html/index_tmpl.html")
 		}
 
-		f := func(rw http.ResponseWriter, req *http.Request) {
+		f := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			if req.URL.Path != "/" && req.URL.Path != "/#" {
 				rw.WriteHeader(http.StatusNotFound)
 
@@ -140,23 +113,23 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 			rw.WriteHeader(http.StatusOK)
 			tmp.Execute(rw, *resp)
-		}
+		})
 
-		return &PageHandler{f}, nil
+		return &f, nil
 	}()
 
 	if err != nil {
 		return nil, err
 	}
 
-	res["/onlinejudge/"], err = func() (*PageHandler, error) {
+	res["/onlinejudge/"], err = func() (*http.HandlerFunc, error) {
 		ojh := http.StripPrefix("/onlinejudge/", CreateOnlineJudgeHandler())
 
 		if ojh == nil {
 			return nil, errors.New("Failed to CreateOnlineJudgeHandler()")
 		}
 
-		f := func(rw http.ResponseWriter, req *http.Request) {
+		f := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			rw.WriteHeader(http.StatusNotImplemented)
 
 			fmt.Fprint(rw, NI501)
@@ -164,16 +137,16 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 			return
 
 			ojh.ServeHTTP(rw, req)
-		}
+		})
 
-		return &PageHandler{f}, nil
+		return &f, nil
 	}()
 
 	if err != nil {
 		return nil, err
 	}
 
-	res["/contests/"], err = func() (*PageHandler, error) {
+	res["/contests/"], err = func() (*http.HandlerFunc, error) {
 		contestsTopHandler, err := CreateContestsTopHandler()
 
 		if err != nil {
@@ -182,18 +155,18 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 		handler := http.StripPrefix("/contests", *contestsTopHandler)
 
-		f := func(rw http.ResponseWriter, req *http.Request) {
+		f := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			handler.ServeHTTP(rw, req)
-		}
+		})
 
-		return &PageHandler{f}, nil
+		return &f, nil
 	}()
 
 	if err != nil {
 		return nil, err
 	}
 
-	res["/login"], err = func() (*PageHandler, error) {
+	res["/login"], err = func() (*http.HandlerFunc, error) {
 		type LoginTemp struct {
 			IsFailed bool
 			BackURL  string
@@ -205,7 +178,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 			return nil, errors.New("Failed to load ./html/login_tmpl.html")
 		}
 
-		f := func(rw http.ResponseWriter, req *http.Request) {
+		f := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			if req.Method == "GET" {
 				req.ParseForm()
 				rw.WriteHeader(http.StatusOK)
@@ -223,23 +196,22 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 			} else if req.Method == "POST" {
 				if err := req.ParseForm(); err != nil {
 					rw.WriteHeader(http.StatusBadRequest)
-					rw.Write(nil)
 
 					return
 				}
 
 				loginID, res := req.Form["loginID"]
 				password, res2 := req.Form["password"]
-				backurl, res3 := req.Form["comeback"]
+				comeback, res3 := req.Form["comeback"]
 
-				if !res || !res2 || !res3 || len(loginID) == 0 || len(password) == 0 || len(backurl) == 0 || len(loginID) > 20 {
+				if !res || !res2 || !res3 || len(loginID) == 0 || len(password) == 0 || len(comeback) == 0 {
 					rw.WriteHeader(http.StatusBadRequest)
 					fmt.Fprint(rw, BR400)
 
 					return
 				}
 
-				if strings.Index(backurl[0], "//") != -1 || len(loginID[0]) > 40 {
+				if strings.Index(comeback[0], "//") != -1 || len(loginID[0]) > 40 {
 					rw.WriteHeader(http.StatusBadRequest)
 					fmt.Fprint(rw, BR400)
 
@@ -252,7 +224,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 				if err != nil || !reflect.DeepEqual(user.PassHash, passHash[:]) {
 					rw.WriteHeader(http.StatusOK)
 
-					tmp.Execute(rw, LoginTemp{true, backurl[0]})
+					tmp.Execute(rw, LoginTemp{true, comeback[0]})
 
 					return
 				}
@@ -273,26 +245,26 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 					http.SetCookie(rw, &cookie)
 
-					backurl[0] = /*"http://azure2.wt6.pw:10065" + */ backurl[0] // TODO: Load from setting file
+					comeback[0] = /*"http://azure2.wt6.pw:10065" + */ comeback[0] // TODO: Load from setting file
 
-					RespondRedirection(rw, backurl[0])
+					RespondRedirection(rw, comeback[0])
 				}
 			} else {
 				rw.WriteHeader(http.StatusBadRequest)
 				fmt.Fprint(rw, BR400)
 			}
 
-		}
+		})
 
-		return &PageHandler{f}, nil
+		return &f, nil
 	}()
 
 	if err != nil {
 		return nil, err
 	}
 
-	res["/logout"], err = func() (*PageHandler, error) {
-		f := func(rw http.ResponseWriter, req *http.Request) {
+	res["/logout"], err = func() (*http.HandlerFunc, error) {
+		f := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			session := ParseSession(req)
 
 			if session != nil {
@@ -307,23 +279,23 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 			http.SetCookie(rw, &cookie)
 			RespondRedirection(rw, "/")
-		}
+		})
 
-		return &PageHandler{f}, nil
+		return &f, nil
 	}()
 
 	if err != nil {
 		return nil, err
 	}
 
-	res["/userinfo"], err = func() (*PageHandler, error) {
+	res["/userinfo"], err = func() (*http.HandlerFunc, error) {
 		tmp, err := template.ParseFiles("./html/userinfo_tmpl.html")
 
 		if err != nil {
 			return nil, err
 		}
 
-		f := func(rw http.ResponseWriter, req *http.Request) {
+		f := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			user, err := ParseRequestForUseData(req)
 
 			if err != nil {
@@ -334,23 +306,23 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 			rw.WriteHeader(http.StatusOK)
 			tmp.Execute(rw, user)
-		}
+		})
 
-		return &PageHandler{f}, nil
+		return &f, nil
 	}()
 
 	if err != nil {
 		return nil, err
 	}
 
-	res["/signup"], err = func() (*PageHandler, error) {
+	res["/signup"], err = func() (*http.HandlerFunc, error) {
 		_, err := template.ParseFiles("./html/signup_tmpl.html")
 
 		if err != nil {
 			return nil, err
 		}
 
-		f := func(rw http.ResponseWriter, req *http.Request) {
+		f := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			rw.WriteHeader(http.StatusNotImplemented)
 			rw.Write([]byte(NI501))
 
@@ -377,12 +349,12 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 			if req.Method == "GET" {
 
 			}
-		}
+		})
 
-		return &PageHandler{f}, nil
+		return &f, nil
 	}()
 
-	res["/help"], err = func() (*PageHandler, error) {
+	res["/help"], err = func() (*http.HandlerFunc, error) {
 		tmp, err := template.ParseFiles("./html/help_tmpl.html")
 
 		if err != nil {
@@ -395,7 +367,7 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 			IsSignedIn bool
 		}
 
-		f := func(rw http.ResponseWriter, req *http.Request) {
+		f := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			rw.WriteHeader(http.StatusNotFound)
 			rw.Write([]byte(NF404))
 
@@ -435,20 +407,20 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 			page := bluemonday.UGCPolicy().SanitizeBytes(unsafe)
 
 			tmp.Execute(rw, TemplateVal{html.HTML(string(page)), Name, IsSignedIn})
-		}
+		})
 
-		return &PageHandler{f}, nil
+		return &f, nil
 	}()
 
 	// Debug request
-	res["/admin"], err = func() (*PageHandler, error) {
+	res["/admin"], err = func() (*http.HandlerFunc, error) {
 		tmp, err := template.ParseFiles("./html/admin_tmpl.html")
 
 		if err != nil {
 			return nil, err
 		}
 
-		f := func(rw http.ResponseWriter, req *http.Request) {
+		f := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			err := req.ParseForm()
 
 			if err != nil {
@@ -508,9 +480,9 @@ func CreateHandlers() (*map[string]*PageHandler, error) {
 
 				RespondRedirection(rw, "/admin")
 			}
-		}
+		})
 
-		return &PageHandler{f}, nil
+		return &f, nil
 	}()
 
 	if err != nil {

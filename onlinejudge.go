@@ -20,7 +20,7 @@ func CreateOnlineJudgeHandler() *http.ServeMux {
 	ojh := OnlineJudgeHandler{}
 	mux := http.NewServeMux()
 
-	mux.Handle("/problems/", http.StripPrefix("/problems/", FuncToHandler(ojh.Problems)))
+	mux.Handle("/problems/", http.StripPrefix("/problems/", http.HandlerFunc(ojh.Problems)))
 
 	return mux
 }

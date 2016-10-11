@@ -152,7 +152,7 @@ func main() {
 	}
 
 	for k, v := range *handlers {
-		mux.HandleFunc(k, v.PassHandler())
+		mux.HandleFunc(k, *v)
 	}
 
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
@@ -173,7 +173,7 @@ func main() {
 
 	// Should use TLS
 	server := http.Server{
-		Addr:           settingManager.Get().ListenEndpoint,
+		Addr:           settingManager.Get().ListeningEndpoint,
 		MaxHeaderBytes: 1 << 20,
 		Handler:        xssProtector,
 	}
