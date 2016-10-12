@@ -17,7 +17,7 @@
 - MySQL
 
 ## How to install
-- install MySQL
+- install MySQL and [popcon-judge-go](https://github.com/cs3238-tsuzu/popcon-judge-go)
 - Write settings in "popcon.json" (ex. popcon_template.json, autocommit must be off.)
 - Run "go get github.com/cs3238-tsuzu/popcon"
 - Run "mkdir submissions contest_problems contests"

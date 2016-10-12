@@ -1,7 +1,12 @@
- {
- 	"ReCAPTCHA":"hogehoge(if you don't need this function, be empty)",
-	"AddUser": true,
-	"CreateContest": true,
-	"DB": "",
-	"JudgeKey":"hoge"
+{
+	"ReCAPTCHASite":"",
+	"ReCAPTCHASecret":"",
+	"CanCreateUser": true,
+	"CanCreateContestByNotAdmin": true,
+	"DB": "root:hoge@/popcon?charset=utf8",
+	"JudgeKey":"popcon_judge_password",
+	"ListeningEndpoint": ":443",
+	"CertFilePath":"ssl/myself.crt",
+	"KeyFilePath":"ssl/myself.key",
+	"FaviconPath":"./static/popcon.ico"
 }
