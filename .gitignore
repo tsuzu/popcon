@@ -5,6 +5,7 @@ deploy.sh
 popcon.json
 log
 .VSCode/
+ssl/
 contests/
 contest_problems/
 submissions/

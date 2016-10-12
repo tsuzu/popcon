@@ -112,13 +112,13 @@ func main() {
 	lo, err := CreateLogOut()
 
 	if err != nil {
-		panic(err)
+		DBLog.Fatal(err)
 	}
 
 	pmainDB, err := NewDatabaseManager()
 
 	if err != nil {
-		panic(err)
+		DBLog.Fatal(err)
 	}
 
 	// Copy to the global variable
@@ -148,7 +148,7 @@ func main() {
 	handlers, err := CreateHandlers()
 
 	if err != nil {
-		panic(err)
+		HttpLog.Fatal(err)
 	}
 
 	for k, v := range *handlers {
@@ -161,7 +161,7 @@ func main() {
 	xffh, err := xff.Default()
 
 	if err != nil {
-		panic(err)
+		HttpLog.Fatal(err)
 	}
 
 	logger := gorilla.LoggingHandler(lo, xffh.Handler(mux))
@@ -178,9 +178,14 @@ func main() {
 		Handler:        xssProtector,
 	}
 
-	err = server.ListenAndServe()
+	setting = settingManager.Get()
+	if len(setting.CertFilePath) != 0 && len(setting.KeyFilePath) != 0 {
+		err = server.ListenAndServeTLS(setting.CertFilePath, setting.KeyFilePath)
+	}else {
+		err = server.ListenAndServe()
+	}
 
 	if err != nil {
-		panic(err)
+		HttpLog.Fatal(err)
 	}
 }
