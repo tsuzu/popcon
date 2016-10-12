@@ -112,13 +112,13 @@ func main() {
 	lo, err := CreateLogOut()
 
 	if err != nil {
-		DBLog.Fatal(err)
+		panic(err)
 	}
 
 	pmainDB, err := NewDatabaseManager()
 
 	if err != nil {
-		DBLog.Fatal(err)
+		panic(err)
 	}
 
 	// Copy to the global variable
@@ -157,6 +157,17 @@ func main() {
 
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 	mux.Handle("/judge", JudgeTransfer{})
+	mux.HandleFunc("/favicon.ico", func() http.HandlerFunc {
+		faviconPath := settingManager.Get().FaviconPath
+		return func(rw http.ResponseWriter, req *http.Request) {
+			if len(faviconPath) == 0 {
+				rw.WriteHeader(http.StatusNotFound)
+				rw.Write([]byte(NF404))
+			}else {
+				http.ServeFile(rw, req, faviconPath)
+			}
+		}
+	}())
 
 	xffh, err := xff.Default()
 

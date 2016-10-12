@@ -12,10 +12,12 @@ type Setting struct {
 	DB                         string
 	JudgeKey                   string
 	ListeningEndpoint          string
+	FaviconPath				   string
 
 	// If HTTPS isn't needed, leave empty
 	CertFilePath			   string 
-	KeyFilePath			       string 
+	KeyFilePath			       string
+
 }
 
 type SettingManager struct {
