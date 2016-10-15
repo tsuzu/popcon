@@ -89,7 +89,7 @@ func main() {
 		return
 	}
 
-	if len(*pprof) == 0 {
+	if len(*pprof) != 0 {
 		l, err := net.Listen("tcp", *pprof)
     	
 		if err != nil {
