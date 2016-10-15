@@ -315,6 +315,33 @@ func CreateHandlers() (*map[string]*http.HandlerFunc, error) {
 		return nil, err
 	}
 
+	res["/userinfo/update_password"], err = func() (*http.HandlerFunc, error) {
+		tmp, err := template.ParseFiles("./html/userinfo_update_password_tmpl.html")
+
+		if err != nil {
+			return nil, err
+		}
+
+		f := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			user, err := ParseRequestForUseData(req)
+
+			if err != nil {
+				RespondRedirection(rw, "/userinfo")
+
+				return
+			}
+
+			rw.WriteHeader(http.StatusOK)
+			tmp.Execute(rw, user)
+		})
+
+		return &f, nil
+	}()
+
+	if err != nil {
+		return nil, err
+	}
+
 	res["/signup"], err = func() (*http.HandlerFunc, error) {
 		_, err := template.ParseFiles("./html/signup_tmpl.html")
 

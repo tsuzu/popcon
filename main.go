@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"syscall"
+	_ "net/http/pprof"
+	"net"
 )
 
 func CreateDefaultAdminUser() bool {
@@ -76,6 +78,7 @@ func CreateDefaultAdminUser() bool {
 
 func main() {
 	settingFile := flag.String("setting", "./popcon.json", "the path to setting file")
+	pprof := flag.String("pprof-port", "", "To run pprof server, set the address to listen")
 	help := flag.Bool("help", false, "Show help")
 
 	flag.Parse()
@@ -84,6 +87,16 @@ func main() {
 		flag.PrintDefaults()
 
 		return
+	}
+
+	if len(*pprof) == 0 {
+		l, err := net.Listen("tcp", *pprof)
+    	
+		if err != nil {
+    	    panic(err)
+	    }
+    	fmt.Printf("pprof server is listening on %s\n", l.Addr())
+	    go http.Serve(l, nil)
 	}
 
 	fp, err := os.OpenFile(*settingFile, os.O_RDONLY, 0664)
